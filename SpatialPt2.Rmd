@@ -1,0 +1,106 @@
+---
+title: "SpatialPt2"
+output: html_document
+date: "2023-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Resource Selection Function 
+
+```{r}
+library(ResourceSelection)
+library(MASS)
+library(lme4)
+library(tidyverse)
+
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "Spatialpt2"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+
+data_2<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_2023.csv") # new dataset 
+
+test <- read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_final.csv") # old dataset 
+
+summary(test)
+names(test)
+dim(test)
+# 2970   17
+test$BatID <- as.factor(test$BatID)
+summary(test$BatID)
+
+#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja 
+#       32      180      156      158      268      234      237      180 
+#     Line   Louise    Maren    Marie     Nora   Phoebe Ragnhild    Reeda 
+#      103      128      282       62       98      123       56      140 
+#    Sofia   Steffi    Stine     Thea    Turid 
+#       78       69      168      202       16 
+#       
+
+
+data_2$BatID <- as.factor(data_2$BatID)
+summary(data_2$BatID)
+
+
+# Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja 
+#       32      180      156      160      268      234      237      179 
+#     Line   Louise    Maren    Marie     Nora   Phoebe Ragnhild    Reeda 
+#      108      128      282       62       98      123       56      140 
+#    Sofia   Steffi    Stine     Thea    Turid 
+#       78       70      167      202       16 
+
+
+dim(data_2)
+# 2976   18
+
+## Differences between this dataset and the last 
+# Dagny = + 2 
+# Kaia = -1 
+# Line = +5
+# Steffi = +1 
+# Stine = -1 
+
+# The difference is related to how zentropy was removed.... not entirely sure why. 
+
+data_2$zcv<-data_2$zsd/data_2$zmean
+head(data_2)
+dim(data_2)
+#[1] 2976   19
+summary(data_2) 
+
+data_2 <- na.omit(data_2)
+dim(data_2)
+#[1] 2970   18  #There were no more NAs
+
+data_2$Species=as.factor(data_2$Species)
+data_2$BatID=as.factor(data_2$BatID)
+data_2[,4:18]=scale(data_2[,4:18],scale=TRUE)#standardize lidar data to mean of zero
+str(data_2)
+summary(data_2)
+
+#Check correlations between pairs of lidar variables
+lidar.data <- data_2[, 4:length(data_2)]
+round(cor(lidar.data), 2)
+
+```
+
+
+
