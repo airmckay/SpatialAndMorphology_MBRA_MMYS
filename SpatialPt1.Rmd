@@ -2236,6 +2236,30 @@ plot(B_MCP)
 plot(M_MCP)
 
 ### Figure out how to make mcp.all from the data here... 
+Species.col<- c("blue","black")
+names(Species.col)<-levels(Bats45$Species)
+plot(Bats45, col = Species.col[Bats45$Species],pch=20, cex=0.5)
+
+BatID.col<- c("red","gold","blue","tomato","sienna1","indianred","orangered","lightseagreen","orangered3","lightcoral","cornflowerblue","salmon4","cyan","brown1","brown4","chocolate1","skyblue","steelblue4","darkgoldenrod1","azure","brown3")
+
+temp <- Bats45
+temp@data <- data.frame(id = Bats45@data$Species)#--
+Bats45.mcp <- mcp(temp, percent = 95)
+plot(Bats45, col = Species.col[Bats45$Species],pch=20, cex=0.5)
+plot(Bats45.mcp, border = adjustcolor(Species.col), col = adjustcolor(Species.col, alpha = 0.3), add = TRUE)
+
+
+temp <- Bats45
+temp@data <- data.frame(id = Bats45@data$BatID)#---
+Bats.mcp <- mcp(temp, percent = 95)
+plot(Bats45, col = BatID.col[Bats45$BatID], pch=20, cex=0.5)
+plot(Bats.mcp, border = adjustcolor(BatID.col), col = adjustcolor(BatID.col, alpha = 0.3), add = TRUE)
+
+dim(Bats.mcp)
+summary(Bats.mcp)
+
+dim(mcp.all)
+summary(mcp.all)
 
 ```
 
