@@ -150,17 +150,18 @@ summary(Bats45$Dir.obs=="Yes"|Bats45$BD=="Yes")
 #   Mode   FALSE    TRUE 
 # logical     772     730 
 
-summary(Bats45$Dir.obs=="Yes")
+summary(Bats45$Dir.obs=="Yes") # Observations where the bat was seen 
 #   Mode   FALSE    TRUE 
 # logical    1040     462
 
-summary(Bats45$BD=="Yes")
+summary(Bats45$BD=="Yes") # Observations where the bat was picked up by a handheld heterodyne 
 #    Mode   FALSE    TRUE 
 # logical     820     682 
 
 
 ```
 
+*CONSIDER* adding the roost sites of these bats into their locations before this next step to have a more complete home range estimate. 
 
 ## Create spatial data frame
 
@@ -270,9 +271,9 @@ zq90 <- myobject$zq90
 
 ## Creating a satellite image map of study area 
 
-require(OpenStreetMap)
-sa<-extent(xy.spatial) # study area 
-proj4string(sa) <- CRS(sa) 
+# require(OpenStreetMap)
+# sa<-extent(xy.spatial) # study area 
+# proj4string(sa) <- CRS(sa) 
 
 
 ### Had issues mapping this - try some other way ## later## 
@@ -2128,6 +2129,9 @@ summary(Mbra.data)
 dim(Mbra.data)
 table(Mbra.data$BatID)
 
+# Astrid  Dagny   Kaja  Maren   Nora Phoebe  Sofia Steffi   Thea 
+#    162    166    182    282     98    124     78     78    202 
+
 #####################################################
 #####################################################
 
@@ -2162,10 +2166,10 @@ dim(data_16)
 data_16$Species <- as.factor(data_16$Species)
 data_16$BatID <- as.factor(data_16$BatID)
 summary(data_16)
+dim(data_16)
+# Previously: Previously (2020): 2970   1   #More observations had to be deleted because of NAs for res16 than for res250
 
-#[1] 2970   1   #More observations had to be deleted because of NAs for res16 than for res250
-
-## This is now 2976 .... 
+## This is now 2974 .... 
 
 #write.csv(data_16, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_2023.csv")
 
@@ -2176,7 +2180,7 @@ dim(data_16.used)
 #[1] 1478   17
 dim(data_16.avail)
 #[1] 1492   17
-# Now 1500   17
+# Now 1496   17
 
 #I am going to export this as a csv file so that you can run RSFs later without going through all the previous code
 # write.table(data_16, file = file.path(output_today, "data_95MCP16_excl_zentropy.csv") ) 
@@ -2224,13 +2228,13 @@ summary(M_MCP)
 
 #Max.   :72.8878 
 
+
 #B_MCP and M_MCP combined: 
-
-
-tot_mcp <- rbind.SpatialLinesDataFrame(M_MCP, B_MCP)
-plot(tot_mcp)
-
-test <- tot_mcp <- as.data.frame(tot_mcp) # then you lose the individual ID... 
+# tot_mcp <- rbind.SpatialLinesDataFrame(M_MCP, B_MCP)
+# plot(tot_mcp)
+# 
+# tot_mcp <- as.data.frame(tot_mcp) # then you lose the individual ID.
+.. 
 
 plot(B_MCP)
 plot(M_MCP)
@@ -2255,20 +2259,157 @@ Bats.mcp <- mcp(temp, percent = 95)
 plot(Bats45, col = BatID.col[Bats45$BatID], pch=20, cex=0.5)
 plot(Bats.mcp, border = adjustcolor(BatID.col), col = adjustcolor(BatID.col, alpha = 0.3), add = TRUE)
 
-dim(Bats.mcp)
-summary(Bats.mcp)
-
-dim(mcp.all)
-summary(mcp.all)
-
 ```
 
 
 
 
 ```{r}
-mcp.all<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/mcp_total.csv", header=TRUE)
+
+## Need to recreate this dataset - not clear when / When it was made from exisitng scripts. 
+mcp.all<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/mcp_total.csv", header=TRUE) 
+dim(mcp.all)
+# 21 4
 head(mcp.all)
+#       id     area   fSpecies obs
+# 1 Amelia  4.60285 MYSTACINUS  16
+# 2 Aricia 26.46360 MYSTACINUS  90
+# 3  Daisy 10.28550 MYSTACINUS 134
+# 4  Ethel 72.88780 MYSTACINUS 117
+# 5    Ida 46.47320 MYSTACINUS 119
+# 6 Louise 26.07665 MYSTACINUS  64
+summary(mcp.all)
+ #      id                 area            fSpecies              obs        
+ # Length:21          Min.   :  0.5285   Length:21          Min.   :  8.00  
+ # Class :character   1st Qu.: 10.2855   Class :character   1st Qu.: 39.00  
+ # Mode  :character   Median : 35.1854   Mode  :character   Median : 70.00  
+ #                    Mean   : 50.5142                      Mean   : 71.52  
+ #                    3rd Qu.: 72.8878                      3rd Qu.: 91.00  
+ #                    Max.   :189.2164                      Max.   :141.00 
+
+
+## Brandtii first 
+Astrid.mcp.df <- as.data.frame(Astrid.mcp) 
+Astrid.mcp.df$id <- "Astrid"
+Astrid.mcp.df$fSpecies <- "BRANDTII"
+
+Dagny.mcp.df <- as.data.frame(Dagny.mcp) 
+Dagny.mcp.df$id <- "Dagny "
+Dagny.mcp.df$fSpecies <- "BRANDTII"
+
+Kaja.mcp.df <- as.data.frame(Kaja.mcp) 
+Kaja.mcp.df$id <- "Kaja "
+Kaja.mcp.df$fSpecies <- "BRANDTII"
+
+Maren.mcp.df <- as.data.frame(Maren.mcp) 
+Maren.mcp.df$id <- "Maren "
+Maren.mcp.df$fSpecies <- "BRANDTII"
+
+Nora.mcp.df <- as.data.frame(Nora.mcp) 
+Nora.mcp.df$id <- "Nora "
+Nora.mcp.df$fSpecies <- "BRANDTII"
+
+Phoebe.mcp.df <- as.data.frame(Phoebe.mcp) 
+Phoebe.mcp.df$id <- "Phoebe "
+Phoebe.mcp.df$fSpecies <- "BRANDTII"
+
+Sofia.mcp.df <- as.data.frame(Sofia.mcp) 
+Sofia.mcp.df$id <- "Sofia "
+Sofia.mcp.df$fSpecies <- "BRANDTII"
+
+Steffi.mcp.df <- as.data.frame(Steffi.mcp) 
+Steffi.mcp.df$id <- "Steffi "
+Steffi.mcp.df$fSpecies <- "BRANDTII"
+
+Thea.mcp.df <- as.data.frame(Thea.mcp) 
+Thea.mcp.df$id <- "Thea "
+Thea.mcp.df$fSpecies <- "BRANDTII"
+
+### Now Mystacinus 
+
+Amelia.mcp.df <- as.data.frame(Amelia.mcp) 
+Amelia.mcp.df$id <- "Amelia "
+Amelia.mcp.df$fSpecies <- "MYSTACINUS"
+
+Aricia.mcp.df <- as.data.frame(Aricia.mcp) 
+Aricia.mcp.df$id <- "Aricia "
+Aricia.mcp.df$fSpecies <- "MYSTACINUS"
+
+Daisy.mcp.df <- as.data.frame(Daisy.mcp) 
+Daisy.mcp.df$id <- "Daisy "
+Daisy.mcp.df$fSpecies <- "MYSTACINUS"
+
+Ethel.mcp.df <- as.data.frame(Ethel.mcp) 
+Ethel.mcp.df$id <- "Ethel "
+Ethel.mcp.df$fSpecies <- "MYSTACINUS"
+
+Ida.mcp.df <- as.data.frame(Ida.mcp) 
+Ida.mcp.df$id <- "Ida "
+Ida.mcp.df$fSpecies <- "MYSTACINUS"
+
+Louise.mcp.df <- as.data.frame(Louise.mcp) 
+Louise.mcp.df$id <- "Louise "
+Louise.mcp.df$fSpecies <- "MYSTACINUS"
+
+Marie.mcp.df <- as.data.frame(Marie.mcp) 
+Marie.mcp.df$id <- "Marie "
+Marie.mcp.df$fSpecies <- "MYSTACINUS"
+
+Ragnhild.mcp.df <- as.data.frame(Ragnhild.mcp) 
+Ragnhild.mcp.df$id <- "Ragnhild "
+Ragnhild.mcp.df$fSpecies <- "MYSTACINUS"
+
+Reeda.mcp.df <- as.data.frame(Reeda.mcp) 
+Reeda.mcp.df$id <- "Reeda "
+Reeda.mcp.df$fSpecies <- "MYSTACINUS"
+
+Stine.mcp.df <- as.data.frame(Stine.mcp) 
+Stine.mcp.df$id <- "Stine "
+Stine.mcp.df$fSpecies <- "MYSTACINUS"
+
+Turid.mcp.df <- as.data.frame(Turid.mcp) 
+Turid.mcp.df$id <- "Turid "
+Turid.mcp.df$fSpecies <- "MYSTACINUS"
+
+allbats <- list(Astrid.mcp.df, Dagny.mcp.df, Kaja.mcp.df, 
+                        Maren.mcp.df, Nora.mcp.df, Phoebe.mcp.df, 
+                        Sofia.mcp.df, Steffi.mcp.df, Thea.mcp.df,
+                        Amelia.mcp.df, Aricia.mcp.df, Daisy.mcp.df,
+                        Ethel.mcp.df, Ida.mcp.df, Louise.mcp.df, Marie.mcp.df, 
+                        Ragnhild.mcp.df, Reeda.mcp.df, Stine.mcp.df, Turid.mcp.df)
+head(allbats)
+
+mcp.df.all1 <- allbats %>% reduce(full_join, by= c('id','area', 'fSpecies')) 
+
+
+head(mcp.df.all1) # Looking good! Just need to save the number of observations and add those. 
+#        id      area fSpecies
+# 1  Astrid 189.21635 BRANDTII
+# 2  Dagny   56.82605 BRANDTII
+# 3   Kaja    3.46870 BRANDTII
+# 4  Maren   35.18540 BRANDTII
+# 5   Nora  129.03770 BRANDTII
+# 6 Phoebe  154.08315 BRANDTII
+
+bat.locs1 <- as.data.frame(bat.locs) # 1502 obs of 13 vars
+
+sumobs <- bat.locs1 %>% group_by(BatID) %>% dplyr::summarize(obs = sum(n()))
+head(sumobs)
+#   BatID    obs
+#   <fct>  <int>
+# 1 Amelia    16
+# 2 Aricia    90
+# 3 Astrid    81
+# 4 Dagny     83
+# 5 Daisy    134
+# 6 Ethel    117
+
+mcp.df.all1$BatID <- as.factor(mcp.df.all1$id ) # Make a common column for joining
+
+mcp.all2 <- left_join(mcp.df.all1, sumobs)
+head(mcp.all2)
+## START HERE
+
 
 hr<-area$mcp.all~lm(fSpecies+obs,data=mcp.all)
 summary(hr)
@@ -2338,6 +2479,7 @@ summary(tot_mcp)
 
 
 ```{r}
+
 boxplot(area ~ fSpecies, strip = strip.custom(bg = 'white'),
         cex = .5,
         data = mcp.all,
@@ -2346,8 +2488,6 @@ boxplot(area ~ fSpecies, strip = strip.custom(bg = 'white'),
         names = c("M. brandtii", "M. mystacinus"),
         col = c("indianred1", "turquoise3")
         ) 
-
-
 
 plot(area~ fSpecies+obs, data=mcp.all)
 
