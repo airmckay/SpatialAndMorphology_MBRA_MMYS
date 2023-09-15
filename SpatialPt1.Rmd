@@ -2239,28 +2239,55 @@ summary(M_MCP)
 plot(B_MCP)
 plot(M_MCP)
 
-### Figure out how to make mcp.all from the data here... 
+```
+
+## Visualizing the mcps 
+```{r}
+
 Species.col<- c("blue","black")
 names(Species.col)<-levels(Bats45$Species)
 plot(Bats45, col = Species.col[Bats45$Species],pch=20, cex=0.5)
 
-BatID.col<- c("red","gold","blue","tomato","sienna1","indianred","orangered","lightseagreen","orangered3","lightcoral","cornflowerblue","salmon4","cyan","brown1","brown4","chocolate1","skyblue","steelblue4","darkgoldenrod1","azure","brown3")
+BatID.col<- c("red","gold","blue",
+              "tomato","sienna1","indianred",
+              "orangered","lightseagreen","orangered3",
+              "lightcoral","cornflowerblue","salmon4",
+              "cyan","brown1","brown4","chocolate1",
+              "skyblue","steelblue4","darkgoldenrod1",
+              "azure","brown3")
 
+# MBRA and MMYS home ranges 
 temp <- Bats45
 temp@data <- data.frame(id = Bats45@data$Species)#--
 Bats45.mcp <- mcp(temp, percent = 95)
 plot(Bats45, col = Species.col[Bats45$Species],pch=20, cex=0.5)
 plot(Bats45.mcp, border = adjustcolor(Species.col), col = adjustcolor(Species.col, alpha = 0.3), add = TRUE)
 
-
+# Each bats home range 
 temp <- Bats45
 temp@data <- data.frame(id = Bats45@data$BatID)#---
 Bats.mcp <- mcp(temp, percent = 95)
 plot(Bats45, col = BatID.col[Bats45$BatID], pch=20, cex=0.5)
 plot(Bats.mcp, border = adjustcolor(BatID.col), col = adjustcolor(BatID.col, alpha = 0.3), add = TRUE)
 
-```
 
+## Export Bats45 and Bats45.mcp as geopackages so you can do this step alone without recreating all this if you want to: 
+sBats45 <- st_as_sf(Bats45, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+plot(sBats45)
+mapview(sBats45) # This works! 
+#st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/AllBats45IndvidualPoints.gpkg", driver = "GPKG")
+ 
+sBats45.mcp <- st_as_sf(Bats45.mcp, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+mapview(sBats45.mcp)
+#st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/EachSpeciesMCP_crs.gpkg", driver = "GPKG")
+
+sBats.mcp <- st_as_sf(Bats.mcp, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+mapview(sBats.mcp)
+st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/EachBatMCP.gpkg", driver = "GPKG")
+
+# for examples of how to map spatial data in library(ggmap):
+#   https://jamesepaterson.github.io/jamespatersonblog/03_trackingworkshop_homeranges
+```
 
 
 
@@ -2294,89 +2321,94 @@ Astrid.mcp.df$id <- "Astrid"
 Astrid.mcp.df$fSpecies <- "BRANDTII"
 
 Dagny.mcp.df <- as.data.frame(Dagny.mcp) 
-Dagny.mcp.df$id <- "Dagny "
+Dagny.mcp.df$id <- "Dagny"
 Dagny.mcp.df$fSpecies <- "BRANDTII"
 
 Kaja.mcp.df <- as.data.frame(Kaja.mcp) 
-Kaja.mcp.df$id <- "Kaja "
+Kaja.mcp.df$id <- "Kaja"
 Kaja.mcp.df$fSpecies <- "BRANDTII"
 
 Maren.mcp.df <- as.data.frame(Maren.mcp) 
-Maren.mcp.df$id <- "Maren "
+Maren.mcp.df$id <- "Maren"
 Maren.mcp.df$fSpecies <- "BRANDTII"
 
 Nora.mcp.df <- as.data.frame(Nora.mcp) 
-Nora.mcp.df$id <- "Nora "
+Nora.mcp.df$id <- "Nora"
 Nora.mcp.df$fSpecies <- "BRANDTII"
 
 Phoebe.mcp.df <- as.data.frame(Phoebe.mcp) 
-Phoebe.mcp.df$id <- "Phoebe "
+Phoebe.mcp.df$id <- "Phoebe"
 Phoebe.mcp.df$fSpecies <- "BRANDTII"
 
 Sofia.mcp.df <- as.data.frame(Sofia.mcp) 
-Sofia.mcp.df$id <- "Sofia "
+Sofia.mcp.df$id <- "Sofia"
 Sofia.mcp.df$fSpecies <- "BRANDTII"
 
 Steffi.mcp.df <- as.data.frame(Steffi.mcp) 
-Steffi.mcp.df$id <- "Steffi "
+Steffi.mcp.df$id <- "Steffi"
 Steffi.mcp.df$fSpecies <- "BRANDTII"
 
 Thea.mcp.df <- as.data.frame(Thea.mcp) 
-Thea.mcp.df$id <- "Thea "
+Thea.mcp.df$id <- "Thea"
 Thea.mcp.df$fSpecies <- "BRANDTII"
 
 ### Now Mystacinus 
 
 Amelia.mcp.df <- as.data.frame(Amelia.mcp) 
-Amelia.mcp.df$id <- "Amelia "
+Amelia.mcp.df$id <- "Amelia"
 Amelia.mcp.df$fSpecies <- "MYSTACINUS"
 
 Aricia.mcp.df <- as.data.frame(Aricia.mcp) 
-Aricia.mcp.df$id <- "Aricia "
+Aricia.mcp.df$id <- "Aricia"
 Aricia.mcp.df$fSpecies <- "MYSTACINUS"
 
 Daisy.mcp.df <- as.data.frame(Daisy.mcp) 
-Daisy.mcp.df$id <- "Daisy "
+Daisy.mcp.df$id <- "Daisy"
 Daisy.mcp.df$fSpecies <- "MYSTACINUS"
 
 Ethel.mcp.df <- as.data.frame(Ethel.mcp) 
-Ethel.mcp.df$id <- "Ethel "
+Ethel.mcp.df$id <- "Ethel"
 Ethel.mcp.df$fSpecies <- "MYSTACINUS"
 
 Ida.mcp.df <- as.data.frame(Ida.mcp) 
-Ida.mcp.df$id <- "Ida "
+Ida.mcp.df$id <- "Ida"
 Ida.mcp.df$fSpecies <- "MYSTACINUS"
 
 Louise.mcp.df <- as.data.frame(Louise.mcp) 
-Louise.mcp.df$id <- "Louise "
+Louise.mcp.df$id <- "Louise"
 Louise.mcp.df$fSpecies <- "MYSTACINUS"
 
+Line.mcp.df <- as.data.frame(Line.mcp) 
+Line.mcp.df$id <- "Line"
+Line.mcp.df$fSpecies <- "MYSTACINUS"
+
 Marie.mcp.df <- as.data.frame(Marie.mcp) 
-Marie.mcp.df$id <- "Marie "
+Marie.mcp.df$id <- "Marie"
 Marie.mcp.df$fSpecies <- "MYSTACINUS"
 
 Ragnhild.mcp.df <- as.data.frame(Ragnhild.mcp) 
-Ragnhild.mcp.df$id <- "Ragnhild "
+Ragnhild.mcp.df$id <- "Ragnhild"
 Ragnhild.mcp.df$fSpecies <- "MYSTACINUS"
 
 Reeda.mcp.df <- as.data.frame(Reeda.mcp) 
-Reeda.mcp.df$id <- "Reeda "
+Reeda.mcp.df$id <- "Reeda"
 Reeda.mcp.df$fSpecies <- "MYSTACINUS"
 
 Stine.mcp.df <- as.data.frame(Stine.mcp) 
-Stine.mcp.df$id <- "Stine "
+Stine.mcp.df$id <- "Stine"
 Stine.mcp.df$fSpecies <- "MYSTACINUS"
 
 Turid.mcp.df <- as.data.frame(Turid.mcp) 
-Turid.mcp.df$id <- "Turid "
+Turid.mcp.df$id <- "Turid"
 Turid.mcp.df$fSpecies <- "MYSTACINUS"
 
 allbats <- list(Astrid.mcp.df, Dagny.mcp.df, Kaja.mcp.df, 
                         Maren.mcp.df, Nora.mcp.df, Phoebe.mcp.df, 
                         Sofia.mcp.df, Steffi.mcp.df, Thea.mcp.df,
                         Amelia.mcp.df, Aricia.mcp.df, Daisy.mcp.df,
-                        Ethel.mcp.df, Ida.mcp.df, Louise.mcp.df, Marie.mcp.df, 
-                        Ragnhild.mcp.df, Reeda.mcp.df, Stine.mcp.df, Turid.mcp.df)
+                        Ethel.mcp.df, Ida.mcp.df, Louise.mcp.df, 
+                        Line.mcp.df, Marie.mcp.df, Ragnhild.mcp.df, 
+                        Reeda.mcp.df, Stine.mcp.df, Turid.mcp.df)
 head(allbats)
 
 mcp.df.all1 <- allbats %>% reduce(full_join, by= c('id','area', 'fSpecies')) 
@@ -2404,11 +2436,36 @@ head(sumobs)
 # 5 Daisy    134
 # 6 Ethel    117
 
-mcp.df.all1$BatID <- as.factor(mcp.df.all1$id ) # Make a common column for joining
+summary(sumobs)
+ #     BatID         obs        
+ # Amelia : 1   Min.   :  8.00  
+ # Aricia : 1   1st Qu.: 39.00  
+ # Astrid : 1   Median : 70.00  
+ # Dagny  : 1   Mean   : 71.52  
+ # Daisy  : 1   3rd Qu.: 91.00  
+ # Ethel  : 1   Max.   :141.00  
 
-mcp.all2 <- left_join(mcp.df.all1, sumobs)
+mcp.df.all1$BatID <- as.factor(mcp.df.all1$id ) # Make a common column for joining
+mcp.df.all1 <- mcp.df.all1 %>% select(-id)
+mcp.df.all1 <- as_tibble(mcp.df.all1)
+
+summary(mcp.df.all1)
+head(mcp.df.all1)
+# # A tibble: 6 x 3
+#     area fSpecies BatID    
+#    <dbl> <chr>    <fct>    
+# 1 189.   BRANDTII "Astrid" 
+# 2  56.8  BRANDTII "Dagny " 
+# 3   3.47 BRANDTII "Kaja "  
+# 4  35.2  BRANDTII "Maren " 
+# 5 129.   BRANDTII "Nora "  
+# 6 154.   BRANDTII "Phoebe "
+
+
+
+mcp.all2 <- dplyr::full_join(mcp.df.all1, sumobs, keep=TRUE )
 head(mcp.all2)
-## START HERE
+## Did I manage to recreate the mcp.all dataset? 
 
 
 hr<-area$mcp.all~lm(fSpecies+obs,data=mcp.all)
@@ -2419,10 +2476,48 @@ summary(hr)
 lm1<-lm(area~fSpecies+obs,data=mcp.all)
 summary(lm1)
 
-#Estimate Std. Error t value Pr(>|t|)   
-#(Intercept)         86.87963   24.89248   3.490  0.00261 **
-#  fSpeciesMYSTACINUS -61.91432   19.64918  -3.151  0.00553 **
-#  obs                 -0.01378    0.26294  -0.052  0.95877   
+# Residuals:
+#    Min     1Q Median     3Q    Max 
+# -82.16 -22.25 -10.65  23.15 103.45 
+# 
+# Coefficients:
+#                     Estimate Std. Error t value Pr(>|t|)   
+# (Intercept)         86.87963   24.89248   3.490  0.00261 **
+# fSpeciesMYSTACINUS -61.91432   19.64918  -3.151  0.00553 **
+# obs                 -0.01378    0.26294  -0.052  0.95877   
+# ---
+# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# 
+# Residual standard error: 44.29 on 18 degrees of freedom
+# Multiple R-squared:  0.3575,	Adjusted R-squared:  0.2861 
+# F-statistic: 5.008 on 2 and 18 DF,  p-value: 0.01865
+
+lmtest <- lm(area~fSpecies+obs,data=mcp.all2)
+summary(lmtest)
+
+# 
+# Residuals:
+#    Min     1Q Median     3Q    Max 
+# -82.16 -22.25 -10.65  23.15 103.45 
+# 
+# Coefficients:
+#                     Estimate Std. Error t value Pr(>|t|)   
+# (Intercept)         86.87963   24.89248   3.490  0.00261 **
+# fSpeciesMYSTACINUS -61.91432   19.64918  -3.151  0.00553 **
+# obs                 -0.01378    0.26294  -0.052  0.95877   
+# ---
+# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# 
+# Residual standard error: 44.29 on 18 degrees of freedom
+# Multiple R-squared:  0.3575,	Adjusted R-squared:  0.2861 
+# F-statistic: 5.008 on 2 and 18 DF,  p-value: 0.01865
+
+
+## That worked! 
+
+#write.csv(mcp.all2, file = file.path(output_today, "mcp.all.2023.csv"))
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/mcp.all.2023.csv"
 
 lm2<-lm(area~fSpecies*obs,data=mcp.all)
 summary(lm2)
@@ -2471,8 +2566,6 @@ summary(mcp.all)
  #                    Mean   : 50.5142                   Mean   : 71.52  
  #                    3rd Qu.: 72.8878                   3rd Qu.: 91.00  
  #                    Max.   :189.2164                   Max.   :141.00 
-
-summary(tot_mcp)
 ```
 
 
