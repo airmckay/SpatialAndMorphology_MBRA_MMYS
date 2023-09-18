@@ -1,27 +1,70 @@
----
-title: "Spatial_MBRA_MMYS"
-output: html_document
-date: "2023-09-13"
----
-# Background 
-Spatial analysis of a population of Myotis brandtii (MBRA) and Myotis mystacinus (MMYS) from observations collected during radiotelemetry surveys in Nittedal in 2018. I will use a resource selection funcion (RSF) to compare how bats occupied different types of habitat described using LiDAR data. 
+
+rm(list = ls())
+# Clear work space
+
+setwd("~/Desktop/R - Thesis /DATA")
+#load data
+
+Bats45<-read.csv("45%.csv",sep=";", dec=",", header=TRUE)
+## THIS IS A SEMICOLON / COMMA SEPERATED CSV - DO NOT USE PERIODS TO DEFINE SEP OR COMMAS TO DEFINE DEC!!! 
+
+## Add column for species ID ##
+mystacinus<- Bats45$BatID %in% c("Amelia","Marie", "Turid", "Reeda", "Daisy", "Line", "Stine", "Ethel", "Ragnhild", "Ida", "Louise", "Aricia")
+
+Bats45$Species<-ifelse(mystacinus == TRUE, "MYSTACINUS", "BRANDTII")
+
+# Set new column with Species as factor instead of character 
+
+Bats45$fSpecies<- as.factor(Bats45$Species)
+str(Bats45)
+names(Bats45)
+#[1] "Date"     "Time"     "BatID"    "Easting"  "Northing" "BD"       "Dir.obs"  "Gain"     "Species"  "fSpecies"
+summary(Bats45$BatID)
+#Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe Ragnhild    Reeda 
+#16       90       81       83      134      117      119       91       55       64      141       31       49       62       28       70 
+#Sofia   Steffi    Stine     Thea    Turid 
+#39       39       84      101        8 
+
+##The number of onsite plots per individual bat 
+
+table(Bats45$Dir.obs, Bats45$BatID)
+#Amelia Aricia Astrid Dagny Daisy Ethel Ida Kaja Line Louise Maren Marie Nora Phoebe Ragnhild Reeda Sofia Steffi Stine Thea Turid
+#No       11     49     59    40    98    79 106   52   37     29   110    25   41     56       28    51    26     34    58   43     8
+#Yes       5     41     22    43    36    38  13   39   18     35    31     6    8      6        0    19    13      5    26   58     0
+#Yes = onsite plots
+
+table(Bats45$fSpecies, Bats45$BatID)
 
 
-# Objectives 
-- Generate a dataset of observed bat foraging locations and potential alternative random foraging locations for the RSF
+M.mystacinus <- subset(Bats45, fSpecies == "MYSTACINUS")
+M.brandtii <- subset(Bats45, fSpecies == "BRANDTII")
 
-- RSF with 16 m2 resolution LiDAR data
+par(mfrow=c(2,1))
+plot(table(M.mystacinus$BatID), main = "Number of plots Mmys", xaxt = "n")
+plot(table(M.brandtii$BatID), main = "Number of plots Mbra")
 
-- RSG with 250 m2 resolution LiDAR data
+#Fix date/time
+
+names(Bats45)[1:2]<-c("date.cap","time.cap")
+
+Bats45$date.cap<-as.character(Bats45$date.cap)
+
+Bats45$time.cap<-as.character(Bats45$time.cap)
+
+#---note: looks like many records are missing date and time data (this is rectified further down in the script)
+
+Bats45$datetime<-paste(Bats45$date.cap,Bats45$time.cap)
+
+Bats45$datetime.posix<-as.POSIXct(strptime(Bats45$datetime,"%d.%m.%y %H:%M"),tz="GMT")
+
+summary(Bats45$fSpecies)
+summary(Bats45$Dir.obs=="Yes"|Bats45$BD=="Yes")
+summary(Bats45$Dir.obs=="Yes")
+summary(Bats45$BD=="Yes")
 
 
+#Load packages
 
-## Prepare work space, import and format the bat observation data 
-
-```{r}
-
-### Prepare the work space
-library(tidyverse)
 library(sp)
 library(sf)
 library(rgeos)
@@ -52,134 +95,24 @@ library(MASS)
 library(dismo)
 library(scales)
 library(rJava)
-library(beepr)
-library(OpenStreetMap)
-library(lubridate)
 
-# Sys.setnev(JAVA_HOME='C:\\Program Files\\Java\\jre7')
-# Yes
-
-getwd()
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
-
-output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
-
-file.name <- "Spatialpt1"
-
-todays_date <- Sys.Date()
- 
-dir.name <- str_c(output,"/", file.name, "_", todays_date)
-dir.name
- 
-output_today <- dir.name
-output_today
-
-dir.create(output_today)
-output_today
-
-
-
-# Import the "onsite" observations of bats 
-Bats45 <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/45%.csv",     
-                     delim = ";", escape_double = FALSE, trim_ws = TRUE)
-
-
-
-str(Bats45)
-dim(Bats45)
-#1502 obs of 8 vars 
-names(Bats45)
-#[1] "Date"     "Time"     "BatID"    "Easting"  "Northing" "BD"       "Dir.obs"  "Gain"     
-
-## Add column for species ID ##
-mystacinus<- Bats45$BatID %in% c("Amelia","Marie", "Turid", "Reeda", "Daisy", "Line", "Stine", "Ethel", "Ragnhild", "Ida", "Louise", "Aricia")
-
-Bats45$Species<-ifelse(mystacinus == TRUE, "MYSTACINUS", "BRANDTII")
-Bats45$Species<- as.factor(Bats45$Species)
-
-## Rename the Dir Obs column to replace the space with a period 
-Bats45 <- Bats45 %>% rename(Dir.obs = "Dir obs")
-
-## Factorize bat ID column as well 
-Bats45$BatID <- as.factor(Bats45$BatID)
-
-summary(Bats45$BatID)
-#Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe Ragnhild    Reeda 
-#16       90       81       83      134      117      119       91       55       64      141       31       49       62       28       70 
-#Sofia   Steffi    Stine     Thea    Turid 
-#39       39       84      101        8 
-
-##The number of onsite plots per individual bat 
-
-table(Bats45$Dir.obs, Bats45$BatID)
-#Yes = onsite plots
-
-
-M.mystacinus <- subset(Bats45, Species == "MYSTACINUS")
-M.brandtii <- subset(Bats45, Species == "BRANDTII")
-
-par(mfrow=c(2,1))
-plot(table(M.mystacinus$BatID), main = "Number of plots Mmys", xaxt = "n")
-plot(table(M.brandtii$BatID), main = "Number of plots Mbra")
-
-#Fix date/time
-
-names(Bats45)[1:2]<-c("date.cap","time.cap")
-
-Bats45$date.cap<-as.character(Bats45$date.cap)
-
-Bats45$time.cap<-as.character(Bats45$time.cap)
-
-#---note: looks like many records are missing date and time data (this is rectified further down in the script)
-
-Bats45$datetime<-paste(Bats45$date.cap,Bats45$time.cap)
-
-head(Bats45$datetime)
-
-# slightly different approach to dateime than in previous analyses
-Bats45$datetime.posix<- as_datetime(Bats45$datetime,format = "%d.%m.%Y %H:%M:%S", tz="CET")
-summary(Bats45)
-
-
-summary(Bats45$Species)
-  # BRANDTII MYSTACINUS 
-  #      686        816 
-
-summary(Bats45$Dir.obs=="Yes"|Bats45$BD=="Yes")
-## Observations when the bats were detected by a handheld heterodyne while tracking 
-#   Mode   FALSE    TRUE 
-# logical     772     730 
-
-summary(Bats45$Dir.obs=="Yes") # Observations where the bat was seen 
-#   Mode   FALSE    TRUE 
-# logical    1040     462
-
-summary(Bats45$BD=="Yes") # Observations where the bat was picked up by a handheld heterodyne 
-#    Mode   FALSE    TRUE 
-# logical     820     682 
-
-
-```
-
-*CONSIDER* adding the roost sites of these bats into their locations before this next step to have a more complete home range estimate. 
-
-## Create spatial data frame
-
-```{r}
+Sys.setnev(JAVA_HOME='C:\\Program Files\\Java\\jre7')
+Yes
+## Create spatial data frame ##
 
 coords <- coordinates(Bats45)<-Bats45[,c("Easting","Northing")]
 #assigning coordinates 
 
 proj4string(Bats45)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
 #Define the projection 
-crs(Bats45)
 
 Bats45<-Bats45[!is.na(Bats45$Easting) | !is.na(Bats45$Northing),]
-#Remove NA values  - There were none to remove 
+#Remove NA values 
 
 #Run again to get per species datasets without NA's 
-Mystacinus <- subset(Bats45, Species == "MYSTACINUS")
-Brandtii <- subset(Bats45, Species == "BRANDTII")
+Mystacinus <- subset(Bats45, fSpecies == "MYSTACINUS")
+Brandtii <- subset(Bats45, fSpecies == "BRANDTII")
+
 
 
 ###########################################################################################
@@ -191,26 +124,19 @@ Brandtii <- subset(Bats45, Species == "BRANDTII")
 #https://github.com/Jean-Romain/lidR/wiki/stdmetrics
 
 ##---------- 16 m2 
-stack.r16<-stack("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/stdmetrics_z_16.grd")
-## Heavy file, this can take a moment 
-beep() 
-
+stack.r16<-stack("stdmetrics_z_16.grd")
 object16<- stack.r16
 names(object16) 
-#  [1] "zmax"         "zmean"        "zsd"          "zskew"        "zkurt"        "zentropy"     "pzabovezmean"
-#  [8] "pzabove0.5"   "zq5"          "zq10"         "zq15"         "zq20"         "zq25"         "zq30"        
-# [15] "zq35"         "zq40"         "zq45"         "zq50"         "zq55"         "zq60"         "zq65"        
-# [22] "zq70"         "zq75"         "zq80"         "zq85"         "zq90"         "zq95"         "zpcum1"      
-# [29] "zpcum2"       "zpcum3"       "zpcum4"       "zpcum5"       "zpcum6"       "zpcum7"       "zpcum8"      
-# [36] "zpcum9"
+
 
 ###############################################################################################
 ###   Used versus available habitat and Mmus versus Mbra - exploratory analyses             ###
 ###############################################################################################
 
+
 bat.locs <- Bats45 
 
-table(bat.locs$BatID, bat.locs$Species)
+table(bat.locs$BatID, bat.locs$fSpecies)
 
 #          BRANDTII MYSTACINUS
 #Amelia          0         16
@@ -236,15 +162,8 @@ table(bat.locs$BatID, bat.locs$Species)
 #Turid           0          8
 
 
-xy.spatial <- SpatialPoints(bat.locs[,c("Easting","Northing")],  
-                            proj4string = CRS(
-                              "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")) 
-myobject <- crop(object16, extent(xy.spatial)) 
-beep()
-
-#Cropping the lidar data to only the area where we have bat observations
-## Convert fom UTM to lat long - reproject 
-
+xy.spatial <- SpatialPoints(bat.locs[,c("Easting","Northing")]) 
+myobject <- crop(object16, extent(xy.spatial)) #Cropping the lidar data to only the area where we have bat observations
 
 #Get the lidar variables from 'myobject'
 zmax <- myobject$zmax
@@ -269,25 +188,17 @@ zq90 <- myobject$zq90
 ####################################
 
 
-## Creating a satellite image map of study area 
-
-# require(OpenStreetMap)
-# sa<-extent(xy.spatial) # study area 
-# proj4string(sa) <- CRS(sa) 
+## Creating a Sattelite image map of study area 
 
 
-### Had issues mapping this - try some other way ## later## 
-# openmap(c(43.46886761482925,119.94873046875),
-#     c(33.22949814144951,133.9892578125),
-#         minNumTiles=4)
-# map <- OpenStreetMap::openmap(c(604765, 6656919), c(607649, 6661050), type='bing') 
-# plot(map)
-# library(leaflet)
-# plot(sa)
-# map <- leaflet(sa)
-# plot1 <- sa %>% leaflet() %>% 
-#    addTiles() 
 
+library(OpenStreetMap)
+require(OpenStreetMap)
+sa<-extent(xy.spatial)
+
+openmap()
+map <- openmap(sa, type='bing')
+plot(map)
 ################################################################################################################
 ###------------- species and individual-level analyses -------------------------------------------##############
 ################################################################################################################
@@ -2051,33 +1962,33 @@ dim(avail.Thea.df)
 
 #--------------zmax 250 plots pooled MCPs for each species
 #windows()
-plot(zmax)
-lines(Amelia.mcp, col="darkred", lwd=2)
-lines(Aricia.mcp, col="darkred", lwd=2)
-lines(Daisy.mcp, col="darkred", lwd=2)
-lines(Ethel.mcp, col="darkred", lwd=2)
-lines(Ida.mcp, col="darkred", lwd=2)
-lines(Line.mcp, col="darkred", lwd=2)
-lines(Louise.mcp, col="darkred", lwd=2)
-lines(Marie.mcp, col="darkred", lwd=2)
-lines(Ragnhild.mcp, col="darkred", lwd=2)
-lines(Reeda.mcp, col="darkred", lwd=2)
-lines(Stine.mcp, col="darkred", lwd=2)
-lines(Turid.mcp, col="darkred", lwd=2)
-mtext("95% MCP M. mystacinus zmax250")
+#plot(zmax)
+#lines(Amelia.mcp, col="darkred", lwd=2)
+#lines(Aricia.mcp, col="darkred", lwd=2)
+#lines(Daisy.mcp, col="darkred", lwd=2)
+#lines(Ethel.mcp, col="darkred", lwd=2)
+#lines(Ida.mcp, col="darkred", lwd=2)
+#lines(Line.mcp, col="darkred", lwd=2)
+#lines(Louise.mcp, col="darkred", lwd=2)
+#lines(Marie.mcp, col="darkred", lwd=2)
+#lines(Ragnhild.mcp, col="darkred", lwd=2)
+#lines(Reeda.mcp, col="darkred", lwd=2)
+#lines(Stine.mcp, col="darkred", lwd=2)
+#lines(Turid.mcp, col="darkred", lwd=2)
+#mtext("95% MCP M. mystacinus zmax250")
 
 #windows()
-plot(zmax)
-lines(Astrid.mcp, col="blue", lwd=2)
-lines(Dagny.mcp, col="blue", lwd=2)
-lines(Kaja.mcp, col="blue", lwd=2)
-lines(Maren.mcp, col="blue", lwd=2)
-lines(Nora.mcp, col="blue", lwd=2)
-lines(Phoebe.mcp, col="blue", lwd=2)
-lines(Sofia.mcp, col="blue", lwd=2)
-lines(Steffi.mcp, col="blue", lwd=2)
-lines(Thea.mcp, col="blue", lwd=2)
-mtext("95% MCP M. brandtii zmax250")
+#plot(zmax)
+#lines(Astrid.mcp, col="blue", lwd=2)
+#lines(Dagny.mcp, col="blue", lwd=2)
+#lines(Kaja.mcp, col="blue", lwd=2)
+#lines(Maren.mcp, col="blue", lwd=2)
+#lines(Nora.mcp, col="blue", lwd=2)
+#lines(Phoebe.mcp, col="blue", lwd=2)
+#lines(Sofia.mcp, col="blue", lwd=2)
+#lines(Steffi.mcp, col="blue", lwd=2)
+#lines(Thea.mcp, col="blue", lwd=2)
+#mtext("95% MCP M. brandtii zmax250")
 
 
 #################################
@@ -2099,9 +2010,6 @@ summary(Mbra.data.used)
 dim(Mbra.data.used)
 table(Mbra.data.used$BatID)
 
-# Astrid  Dagny   Kaja  Maren   Nora Phoebe  Sofia Steffi   Thea 
-#     81     83     91    141     49     62     39     39    101 
-
 #Combine available data for all Mbra individuals
 Mbra.data.avail <- rbind(
   avail.Astrid.df, 
@@ -2118,9 +2026,6 @@ summary(Mbra.data.avail)
 dim(Mbra.data.avail)
 table(Mbra.data.avail$BatID)
 
-# Astrid  Dagny   Kaja  Maren   Nora Phoebe  Sofia Steffi   Thea 
-#     81     83     91    141     49     62     39     39    101 
-
 
 #Combine Used and Avilable data for all Mbra individuals
 Mbra.data <- rbind(Mbra.data.used, Mbra.data.avail)
@@ -2128,9 +2033,6 @@ head(Mbra.data)
 summary(Mbra.data)
 dim(Mbra.data)
 table(Mbra.data$BatID)
-
-# Astrid  Dagny   Kaja  Maren   Nora Phoebe  Sofia Steffi   Thea 
-#    162    166    182    282     98    124     78     78    202 
 
 #####################################################
 #####################################################
@@ -2151,27 +2053,18 @@ dim(Bats.data.used)
 dim(Bats.data.avail)
 #[1] 1502   18
 
+
 #I am going to export this as a csv file to look at the NAs
-#write.table(Bats.data, file = file.path(output_today,"Bats_data_incl_NA_16.csv")) 
-summary(Bats.data)
-subBats.data = subset(Bats.data, select = -c(zentropy) ) #1429 (earlier 1400) observations had NA for zentropy
+#write.table(Bats.data, file = "Bats_data_incl_NA_16.csv", sep = ",", quote = FALSE, append = FALSE, na ="NA")
+ 
+subBats.data = subset(Bats.data, select = -c(zentropy) ) #1400 observations had NA for zentropy
 dim(subBats.data)
 #[1] 3004   17
 
 data_16 <- na.omit(subBats.data)
-
-dim(data_16)
-# 2976
-# Now 2978 ... 
-data_16$Species <- as.factor(data_16$Species)
-data_16$BatID <- as.factor(data_16$BatID)
 summary(data_16)
 dim(data_16)
-# Previously: Previously (2020): 2970   1   #More observations had to be deleted because of NAs for res16 than for res250
-
-## This is now 2974 .... 
-
-#write.csv(data_16, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_2023.csv")
+#[1] 2970   1   #More observations had to be deleted because of NAs for res16 than for res250
 
 data_16.used <- subset(data_16, used == "1")
 data_16.avail <- subset(data_16, used == "0")
@@ -2180,10 +2073,9 @@ dim(data_16.used)
 #[1] 1478   17
 dim(data_16.avail)
 #[1] 1492   17
-# Now 1496   17
 
 #I am going to export this as a csv file so that you can run RSFs later without going through all the previous code
-# write.table(data_16, file = file.path(output_today, "data_95MCP16_excl_zentropy.csv") ) 
+#write.table(data_16, file = "data_95MCP16_excl_zentropy.csv", sep = ",", quote = FALSE, append = FALSE, na ="NA")
 
 #Summarizing home ranges 
 
@@ -2228,245 +2120,8 @@ summary(M_MCP)
 
 #Max.   :72.8878 
 
-
-#B_MCP and M_MCP combined: 
-# tot_mcp <- rbind.SpatialLinesDataFrame(M_MCP, B_MCP)
-# plot(tot_mcp)
-# 
-# tot_mcp <- as.data.frame(tot_mcp) # then you lose the individual ID.
-.. 
-
-plot(B_MCP)
-plot(M_MCP)
-
-```
-
-## Visualizing the mcps 
-```{r}
-
-Species.col<- c("blue","black")
-names(Species.col)<-levels(Bats45$Species)
-plot(Bats45, col = Species.col[Bats45$Species],pch=20, cex=0.5)
-
-BatID.col<- c("red","gold","blue",
-              "tomato","sienna1","indianred",
-              "orangered","lightseagreen","orangered3",
-              "lightcoral","cornflowerblue","salmon4",
-              "cyan","brown1","brown4","chocolate1",
-              "skyblue","steelblue4","darkgoldenrod1",
-              "azure","brown3")
-
-# MBRA and MMYS home ranges 
-temp <- Bats45
-temp@data <- data.frame(id = Bats45@data$Species)#--
-Bats45.mcp <- mcp(temp, percent = 95)
-plot(Bats45, col = Species.col[Bats45$Species],pch=20, cex=0.5)
-plot(Bats45.mcp, border = adjustcolor(Species.col), col = adjustcolor(Species.col, alpha = 0.3), add = TRUE)
-
-# Each bats home range 
-temp <- Bats45
-temp@data <- data.frame(id = Bats45@data$BatID)#---
-Bats.mcp <- mcp(temp, percent = 95)
-plot(Bats45, col = BatID.col[Bats45$BatID], pch=20, cex=0.5)
-plot(Bats.mcp, border = adjustcolor(BatID.col), col = adjustcolor(BatID.col, alpha = 0.3), add = TRUE)
-
-
-## Export Bats45 and Bats45.mcp as geopackages so you can do this step alone without recreating all this if you want to: 
-sBats45 <- st_as_sf(Bats45, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
-plot(sBats45)
-mapview(sBats45) # This works! 
-#st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/AllBats45IndvidualPoints.gpkg", driver = "GPKG")
- 
-sBats45.mcp <- st_as_sf(Bats45.mcp, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
-mapview(sBats45.mcp)
-#st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/EachSpeciesMCP_crs.gpkg", driver = "GPKG")
-
-sBats.mcp <- st_as_sf(Bats.mcp, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
-mapview(sBats.mcp)
-st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/EachBatMCP.gpkg", driver = "GPKG")
-
-# for examples of how to map spatial data in library(ggmap):
-#   https://jamesepaterson.github.io/jamespatersonblog/03_trackingworkshop_homeranges
-```
-
-
-
-```{r}
-
-## Need to recreate this dataset - not clear when / When it was made from exisitng scripts. 
-mcp.all<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/mcp_total.csv", header=TRUE) 
-dim(mcp.all)
-# 21 4
+mcp.all<-read.csv("mcp_total.csv", header=TRUE)
 head(mcp.all)
-#       id     area   fSpecies obs
-# 1 Amelia  4.60285 MYSTACINUS  16
-# 2 Aricia 26.46360 MYSTACINUS  90
-# 3  Daisy 10.28550 MYSTACINUS 134
-# 4  Ethel 72.88780 MYSTACINUS 117
-# 5    Ida 46.47320 MYSTACINUS 119
-# 6 Louise 26.07665 MYSTACINUS  64
-summary(mcp.all)
- #      id                 area            fSpecies              obs        
- # Length:21          Min.   :  0.5285   Length:21          Min.   :  8.00  
- # Class :character   1st Qu.: 10.2855   Class :character   1st Qu.: 39.00  
- # Mode  :character   Median : 35.1854   Mode  :character   Median : 70.00  
- #                    Mean   : 50.5142                      Mean   : 71.52  
- #                    3rd Qu.: 72.8878                      3rd Qu.: 91.00  
- #                    Max.   :189.2164                      Max.   :141.00 
-
-
-## Brandtii first 
-Astrid.mcp.df <- as.data.frame(Astrid.mcp) 
-Astrid.mcp.df$id <- "Astrid"
-Astrid.mcp.df$fSpecies <- "BRANDTII"
-
-Dagny.mcp.df <- as.data.frame(Dagny.mcp) 
-Dagny.mcp.df$id <- "Dagny"
-Dagny.mcp.df$fSpecies <- "BRANDTII"
-
-Kaja.mcp.df <- as.data.frame(Kaja.mcp) 
-Kaja.mcp.df$id <- "Kaja"
-Kaja.mcp.df$fSpecies <- "BRANDTII"
-
-Maren.mcp.df <- as.data.frame(Maren.mcp) 
-Maren.mcp.df$id <- "Maren"
-Maren.mcp.df$fSpecies <- "BRANDTII"
-
-Nora.mcp.df <- as.data.frame(Nora.mcp) 
-Nora.mcp.df$id <- "Nora"
-Nora.mcp.df$fSpecies <- "BRANDTII"
-
-Phoebe.mcp.df <- as.data.frame(Phoebe.mcp) 
-Phoebe.mcp.df$id <- "Phoebe"
-Phoebe.mcp.df$fSpecies <- "BRANDTII"
-
-Sofia.mcp.df <- as.data.frame(Sofia.mcp) 
-Sofia.mcp.df$id <- "Sofia"
-Sofia.mcp.df$fSpecies <- "BRANDTII"
-
-Steffi.mcp.df <- as.data.frame(Steffi.mcp) 
-Steffi.mcp.df$id <- "Steffi"
-Steffi.mcp.df$fSpecies <- "BRANDTII"
-
-Thea.mcp.df <- as.data.frame(Thea.mcp) 
-Thea.mcp.df$id <- "Thea"
-Thea.mcp.df$fSpecies <- "BRANDTII"
-
-### Now Mystacinus 
-
-Amelia.mcp.df <- as.data.frame(Amelia.mcp) 
-Amelia.mcp.df$id <- "Amelia"
-Amelia.mcp.df$fSpecies <- "MYSTACINUS"
-
-Aricia.mcp.df <- as.data.frame(Aricia.mcp) 
-Aricia.mcp.df$id <- "Aricia"
-Aricia.mcp.df$fSpecies <- "MYSTACINUS"
-
-Daisy.mcp.df <- as.data.frame(Daisy.mcp) 
-Daisy.mcp.df$id <- "Daisy"
-Daisy.mcp.df$fSpecies <- "MYSTACINUS"
-
-Ethel.mcp.df <- as.data.frame(Ethel.mcp) 
-Ethel.mcp.df$id <- "Ethel"
-Ethel.mcp.df$fSpecies <- "MYSTACINUS"
-
-Ida.mcp.df <- as.data.frame(Ida.mcp) 
-Ida.mcp.df$id <- "Ida"
-Ida.mcp.df$fSpecies <- "MYSTACINUS"
-
-Louise.mcp.df <- as.data.frame(Louise.mcp) 
-Louise.mcp.df$id <- "Louise"
-Louise.mcp.df$fSpecies <- "MYSTACINUS"
-
-Line.mcp.df <- as.data.frame(Line.mcp) 
-Line.mcp.df$id <- "Line"
-Line.mcp.df$fSpecies <- "MYSTACINUS"
-
-Marie.mcp.df <- as.data.frame(Marie.mcp) 
-Marie.mcp.df$id <- "Marie"
-Marie.mcp.df$fSpecies <- "MYSTACINUS"
-
-Ragnhild.mcp.df <- as.data.frame(Ragnhild.mcp) 
-Ragnhild.mcp.df$id <- "Ragnhild"
-Ragnhild.mcp.df$fSpecies <- "MYSTACINUS"
-
-Reeda.mcp.df <- as.data.frame(Reeda.mcp) 
-Reeda.mcp.df$id <- "Reeda"
-Reeda.mcp.df$fSpecies <- "MYSTACINUS"
-
-Stine.mcp.df <- as.data.frame(Stine.mcp) 
-Stine.mcp.df$id <- "Stine"
-Stine.mcp.df$fSpecies <- "MYSTACINUS"
-
-Turid.mcp.df <- as.data.frame(Turid.mcp) 
-Turid.mcp.df$id <- "Turid"
-Turid.mcp.df$fSpecies <- "MYSTACINUS"
-
-allbats <- list(Astrid.mcp.df, Dagny.mcp.df, Kaja.mcp.df, 
-                        Maren.mcp.df, Nora.mcp.df, Phoebe.mcp.df, 
-                        Sofia.mcp.df, Steffi.mcp.df, Thea.mcp.df,
-                        Amelia.mcp.df, Aricia.mcp.df, Daisy.mcp.df,
-                        Ethel.mcp.df, Ida.mcp.df, Louise.mcp.df, 
-                        Line.mcp.df, Marie.mcp.df, Ragnhild.mcp.df, 
-                        Reeda.mcp.df, Stine.mcp.df, Turid.mcp.df)
-head(allbats)
-
-mcp.df.all1 <- allbats %>% reduce(full_join, by= c('id','area', 'fSpecies')) 
-
-
-head(mcp.df.all1) # Looking good! Just need to save the number of observations and add those. 
-#        id      area fSpecies
-# 1  Astrid 189.21635 BRANDTII
-# 2  Dagny   56.82605 BRANDTII
-# 3   Kaja    3.46870 BRANDTII
-# 4  Maren   35.18540 BRANDTII
-# 5   Nora  129.03770 BRANDTII
-# 6 Phoebe  154.08315 BRANDTII
-
-bat.locs1 <- as.data.frame(bat.locs) # 1502 obs of 13 vars
-
-sumobs <- bat.locs1 %>% group_by(BatID) %>% dplyr::summarize(obs = sum(n()))
-head(sumobs)
-#   BatID    obs
-#   <fct>  <int>
-# 1 Amelia    16
-# 2 Aricia    90
-# 3 Astrid    81
-# 4 Dagny     83
-# 5 Daisy    134
-# 6 Ethel    117
-
-summary(sumobs)
- #     BatID         obs        
- # Amelia : 1   Min.   :  8.00  
- # Aricia : 1   1st Qu.: 39.00  
- # Astrid : 1   Median : 70.00  
- # Dagny  : 1   Mean   : 71.52  
- # Daisy  : 1   3rd Qu.: 91.00  
- # Ethel  : 1   Max.   :141.00  
-
-mcp.df.all1$BatID <- as.factor(mcp.df.all1$id ) # Make a common column for joining
-mcp.df.all1 <- mcp.df.all1 %>% select(-id)
-mcp.df.all1 <- as_tibble(mcp.df.all1)
-
-summary(mcp.df.all1)
-head(mcp.df.all1)
-# # A tibble: 6 x 3
-#     area fSpecies BatID    
-#    <dbl> <chr>    <fct>    
-# 1 189.   BRANDTII "Astrid" 
-# 2  56.8  BRANDTII "Dagny " 
-# 3   3.47 BRANDTII "Kaja "  
-# 4  35.2  BRANDTII "Maren " 
-# 5 129.   BRANDTII "Nora "  
-# 6 154.   BRANDTII "Phoebe "
-
-
-
-mcp.all2 <- dplyr::full_join(mcp.df.all1, sumobs, keep=TRUE )
-head(mcp.all2)
-## Did I manage to recreate the mcp.all dataset? 
-
 
 hr<-area$mcp.all~lm(fSpecies+obs,data=mcp.all)
 summary(hr)
@@ -2476,51 +2131,16 @@ summary(hr)
 lm1<-lm(area~fSpecies+obs,data=mcp.all)
 summary(lm1)
 
-# Residuals:
-#    Min     1Q Median     3Q    Max 
-# -82.16 -22.25 -10.65  23.15 103.45 
-# 
-# Coefficients:
-#                     Estimate Std. Error t value Pr(>|t|)   
-# (Intercept)         86.87963   24.89248   3.490  0.00261 **
-# fSpeciesMYSTACINUS -61.91432   19.64918  -3.151  0.00553 **
-# obs                 -0.01378    0.26294  -0.052  0.95877   
-# ---
-# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-# 
-# Residual standard error: 44.29 on 18 degrees of freedom
-# Multiple R-squared:  0.3575,	Adjusted R-squared:  0.2861 
-# F-statistic: 5.008 on 2 and 18 DF,  p-value: 0.01865
-
-lmtest <- lm(area~fSpecies+obs,data=mcp.all2)
-summary(lmtest)
-
-# 
-# Residuals:
-#    Min     1Q Median     3Q    Max 
-# -82.16 -22.25 -10.65  23.15 103.45 
-# 
-# Coefficients:
-#                     Estimate Std. Error t value Pr(>|t|)   
-# (Intercept)         86.87963   24.89248   3.490  0.00261 **
-# fSpeciesMYSTACINUS -61.91432   19.64918  -3.151  0.00553 **
-# obs                 -0.01378    0.26294  -0.052  0.95877   
-# ---
-# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-# 
-# Residual standard error: 44.29 on 18 degrees of freedom
-# Multiple R-squared:  0.3575,	Adjusted R-squared:  0.2861 
-# F-statistic: 5.008 on 2 and 18 DF,  p-value: 0.01865
-
-
-## That worked! 
-
-#write.csv(mcp.all2, file = file.path(output_today, "mcp.all.2023.csv"))
-output_today
-# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/mcp.all.2023.csv"
+#Estimate Std. Error t value Pr(>|t|)   
+#(Intercept)         86.87963   24.89248   3.490  0.00261 **
+#  fSpeciesMYSTACINUS -61.91432   19.64918  -3.151  0.00553 **
+#  obs                 -0.01378    0.26294  -0.052  0.95877   
 
 lm2<-lm(area~fSpecies*obs,data=mcp.all)
 summary(lm2)
+
+drop1(lm1, test="Chi")
+drop1(lm2, test="Chi")
 
 #Coefficients:
 #  Estimate Std. Error t value Pr(>|t|)    
@@ -2530,14 +2150,9 @@ summary(lm2)
 #fSpeciesMYSTACINUS:obs    1.1210     0.5177   2.166  0.04485 *  
 
 
-drop1(lm1, test="Chi")
-drop1(lm2, test="Chi")
 
-
-# Does not plot... 
-# plot(area~ fSpecies+obs, data=mcp.all)
-
-# Violin plot of the different area covered for each species 
+plot(area~ fSpecies+obs, data=mcp.all)
+library(ggplot2)
 v<-ggplot(mcp.all, aes(x=fSpecies, y=area, fill=fSpecies)) + 
   geom_violin(trim=FALSE) + 
   labs(x = " ", y = " ")+
@@ -2546,69 +2161,12 @@ v<-ggplot(mcp.all, aes(x=fSpecies, y=area, fill=fSpecies)) +
   theme(legend.position="none")
 v
 
-m <- mcp.all %>% mutate(fSpecies = as.factor(fSpecies)) %>% filter(fSpecies == "MYSTACINUS") %>% droplevels() 
+summary(mcp.all$area, fSpecies=="MYSTACINUS")
+summary(mcp.all$area, fSpecies=="BRANDTII")
+
+m<-filter(mcp.all, fSpecies=="MYSTACINUS")
+b<-filter(mcp.all, fSpecies=="BRANDTII")
 summary(m$area)
- #   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
- # 0.5285  6.6036 16.9507 24.0280 31.4660 72.8878 
-
-b <- mcp.all %>% mutate(fSpecies = as.factor(fSpecies)) %>% filter(fSpecies == "BRANDTII") %>% droplevels() 
 summary(b$area)
-  #  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  # 3.469  44.678  74.171  85.829 129.038 189.216 
-
-mcp.all$fSpecies <- as.factor(mcp.all$fSpecies)
 str(mcp.all)
-summary(mcp.all)
- #      id                 area                fSpecies       obs        
- # Length:21          Min.   :  0.5285   BRANDTII  : 9   Min.   :  8.00  
- # Class :character   1st Qu.: 10.2855   MYSTACINUS:12   1st Qu.: 39.00  
- # Mode  :character   Median : 35.1854                   Median : 70.00  
- #                    Mean   : 50.5142                   Mean   : 71.52  
- #                    3rd Qu.: 72.8878                   3rd Qu.: 91.00  
- #                    Max.   :189.2164                   Max.   :141.00 
-```
-
-
-
-
-```{r}
-
-boxplot(area ~ fSpecies, strip = strip.custom(bg = 'white'),
-        cex = .5,
-        data = mcp.all,
-        ylab = " ",
-        xlab = "Species", 
-        names = c("M. brandtii", "M. mystacinus"),
-        col = c("indianred1", "turquoise3")
-        ) 
-
-plot(area~ fSpecies+obs, data=mcp.all)
-
-
-
-#plotting the predicted response 
-library(Lahman)
-if (require("Lahman")) {
-  # Find 3 bats with larges home range
-  tibble::as_tibble(mcp.all) %>%
-    group_by(id) %>%
-    tally(area) %>%
-    top_n(3) 
-}
-
-#1 Astrid  189.
-#2 Nora    129.
-#3 Phoebe  154.
-
-lm2<-lm(area~fSpecies-obs,data=mcp.all)
-
-library(units)
-
-tp <- ggplot(mcp.all, aes(x=obs, y=area, col=fSpecies)) + geom_point() + ylab("area") + geom_smooth(method=lm, se=FALSE, fullrange=TRUE) 
-
-
-tp 
-
-
-```
 

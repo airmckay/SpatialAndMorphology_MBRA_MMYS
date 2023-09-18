@@ -1,11 +1,24 @@
 ---
 title: "SpatialPt2"
-output: html_document
+output: pdf_document: 
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    keep_tex: yes
+latex_engine: pdflatex
+classoption: landscape
+header-includes:
+  \usepackage{helvet}
+  \renewcommand\familydefault{\sfdefault}
+include-before:
+'`\newpage{}`{=latex}'
 date: "2023-09-13"
 ---
 
+  
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(knitr.kable.NA = '') 
 ```
 
 # Resource Selection Function 
@@ -15,7 +28,8 @@ library(ResourceSelection)
 library(MASS)
 library(lme4)
 library(tidyverse)
-
+library(kableExtra)
+library(gtsummary)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -35,32 +49,48 @@ output_today
 dir.create(output_today)
 output_today
 
+data_2<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_2023.csv")
+data_2 <- data_2 %>% select(-1) # remove index column 
+dim(data_2)
+# 2978 17 
+head(data_2)
+#   used Species  BatID zmax      zmean        zsd pzabovezmean pzabove0.5 zq10 zq20 zq30 zq40 zq50 zq60  zq70 zq80
+# 1    1     Mys Amelia 0.25 0.06972477 0.06139518     56.88073          0    0    0    0 0.06 0.08 0.09 0.106 0.12
+# 2    1     Mys Amelia 0.23 0.02857143 0.05092237     30.15873          0    0    0    0 0.00 0.00 0.00 0.024 0.06
+# 3    1     Mys Amelia 0.25 0.06972477 0.06139518     56.88073          0    0    0    0 0.06 0.08 0.09 0.106 0.12
+# 4    1     Mys Amelia 0.25 0.06972477 0.06139518     56.88073          0    0    0    0 0.06 0.08 0.09 0.106 0.12
+# 5    1     Mys Amelia 0.23 0.03238095 0.06108010     26.19048          0    0    0    0 0.00 0.00 0.00 0.000 0.08
+# 6    1     Mys Amelia 0.21 0.01956522 0.05530726     13.04348          0    0    0    0 0.00 0.00 0.00 0.000 0.00
+#    zq90
+# 1 0.140
+# 2 0.108
+# 3 0.140
+# 4 0.140
+# 5 0.119
+# 6 0.064
 
-data_2<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_2023.csv") # new dataset 
-# Removet the index column 
-data_2 <- data_2 %>% select(-1) 
+mcp.all<-read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/mcp.all.2023.csv") # new dataset 
+# Remove the index column and duplicate BatID column 
+mcp.all <- mcp.all %>% select(-BatID.x) %>% select(-1) %>% rename(BatID = BatID.y)
+head(mcp.all)
+#        area fSpecies  BatID obs
+# 1 189.21635 BRANDTII Astrid  81
+# 2  56.82605 BRANDTII  Dagny  83
+# 3   3.46870 BRANDTII   Kaja  91
+# 4  35.18540 BRANDTII  Maren 141
+# 5 129.03770 BRANDTII   Nora  49
+# 6 154.08315 BRANDTII Phoebe  62
 
-test <- read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_final.csv") # old dataset
-# 
-# summary(test)
-# names(test)
+# test <- read.csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/data_95MCP16_final.csv") # old dataset
+# # 
+# head(test)
 # dim(test)
-# # 2970   17
-# test$BatID <- as.factor(test$BatID)
-# summary(test$BatID)
-
-#   Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja 
-#       32      180      156      158      268      234      237      180 
-#     Line   Louise    Maren    Marie     Nora   Phoebe Ragnhild    Reeda 
-#      103      128      282       62       98      123       56      140 
-#    Sofia   Steffi    Stine     Thea    Turid 
-#       78       69      168      202       16 
-#       
+# 2970 17 
+# #       
 
 
 data_2$BatID <- as.factor(data_2$BatID)
 summary(data_2$BatID)
-
 
 # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja 
 #       32      180      156      160      268      234      237      179 
@@ -70,41 +100,26 @@ summary(data_2$BatID)
 #       78       70      167      202       16 
 
 
-dim(data_2)
-# 2976   17
-
-## Differences between this dataset and the last 
-# Dagny = + 2 
-# Kaia = -1 
-# Line = +5
-# Steffi = +1 
-# Stine = -1 
-
 # The difference is related to how zentropy was removed.... not entirely sure why. 
 
 data_2$zcv<-data_2$zsd/data_2$zmean
 head(data_2)
 dim(data_2)
 
-#[1] 2976   18
+#[1] 2978   18
 summary(data_2) 
 
 data_2 <- na.omit(data_2)
 dim(data_2) 
 # 21 NAs introduced in zcv!! 
-#[1] 2976   18  #There were no more NAs
+#[1] 2945  18  #There were no more NAs
 ## Many zero values in these fields 
 
-test$zcv<-test$zsd/test$zmean
-summary(test)
-dim(test)
-
+# test$zcv<-test$zsd/test$zmean
+# summary(test)
+# dim(test)
 # 2970   18
 # This is not the case for the old dataset... 
-# For now I will use the old dataset and try to figure out what is wrong later. 
-test$BatID <- as.factor(test$BatID)
-test$Species <- as.factor(test$Species)
-data_2 <- test 
 
 
 data_2[,4:18]=scale(data_2[,4:18],scale=TRUE)
@@ -166,24 +181,46 @@ fit16 = glmer(used ~ zcv + (1|BatID), data=Mmys,
 # Use a hypothesis test to determine which variables have strong influence on M.mys 
 # Pass = p < 0.001
 
+
+## OLD DATASET 
 #                                    Fixed effects:
 #                         Estimate Std. Error z value Pr(>|z|)  
-summary(fit1)#(Intercept)0.007389   0.049630   0.149    0.882
-summary(fit2)#zmax         0.37634    0.05142   7.319  2.5e-13 ***
-summary(fit3)#zmean        0.26117    0.04992   5.232 1.68e-07 *** 
-summary(fit4)#zsd          0.33848    0.05056   6.694 2.17e-11 ***
-summary(fit5)#pzabovezm   -0.11812    0.04833  -2.444   0.0145 *
+# summary(fit1)#(Intercept)0.007389   0.049630   0.149    0.882
+# summary(fit2)#zmax         0.37634    0.05142   7.319  2.5e-13 ***
+# summary(fit3)#zmean        0.26117    0.04992   5.232 1.68e-07 *** 
+# summary(fit4)#zsd          0.33848    0.05056   6.694 2.17e-11 ***
+# summary(fit5)#pzabovezm   -0.11812    0.04833  -2.444   0.0145 *
+# summary(fit6)#pzabove0.5   0.20394    0.04965   4.107    4e-05 ***
+# summary(fit7)#zq10         0.06303    0.04927   1.279    0.201
+# summary(fit8)#zq20         0.097599   0.049418   1.975   0.0483 *
+# summary(fit9)#zq30         0.1275532  0.0478417   2.666  0.00767 **
+# summary(fit10)#zq40        0.161213   0.048158   3.348 0.000815 ***
+# summary(fit11)#zq50        0.20971    0.04834   4.339 1.43e-05 ***
+# summary(fit12)#zq60        0.23878    0.04858   4.915 8.86e-07 ***
+# summary(fit13)#zq70        0.24015    0.04884   4.917 8.79e-07 ***
+# summary(fit14)#zq80        0.26150    0.04921   5.313 1.08e-07 ***
+# summary(fit15)#zq90        0.29616    0.04999   5.924 3.14e-09 ***
+# summary(fit16)#zcv         0.18268    0.05124   3.565 0.000364 ***
+
+## 2023 analyses 
+#                                    Fixed effects:
+#                         Estimate Std. Error z value Pr(>|z|)  
+summary(fit1)#(Intercept)-0.003706   0.049706  -0.075    0.941
+summary(fit2)#zmax         0.40540    0.05122   7.916 2.46e-15 *** 
+summary(fit3)#zmean        0.28346    0.04957   5.719 1.07e-08 ***
+summary(fit4)#zsd          0.36801    0.05051   7.286  3.2e-13 ***
+summary(fit5)#pzabovezm   -0.0724635  0.0483586  -1.498    0.134
 summary(fit6)#pzabove0.5   0.20394    0.04965   4.107    4e-05 ***
-summary(fit7)#zq10         0.06303    0.04927   1.279    0.201
-summary(fit8)#zq20         0.097599   0.049418   1.975   0.0483 *
-summary(fit9)#zq30         0.1275532  0.0478417   2.666  0.00767 **
-summary(fit10)#zq40        0.161213   0.048158   3.348 0.000815 ***
-summary(fit11)#zq50        0.20971    0.04834   4.339 1.43e-05 ***
-summary(fit12)#zq60        0.23878    0.04858   4.915 8.86e-07 ***
-summary(fit13)#zq70        0.24015    0.04884   4.917 8.79e-07 ***
-summary(fit14)#zq80        0.26150    0.04921   5.313 1.08e-07 ***
-summary(fit15)#zq90        0.29616    0.04999   5.924 3.14e-09 ***
-summary(fit16)#zcv         0.18268    0.05124   3.565 0.000364 ***
+summary(fit7)#zq10         0.120483   0.052616   2.290    0.022 *
+summary(fit8)#zq20         0.09756    0.04788   2.038   0.0416 *
+summary(fit9)#zq30         0.12888    0.04711   2.736  0.00622 **
+summary(fit10)#zq40        0.19080    0.04815   3.963  7.4e-05 ***
+summary(fit11)#zq50        0.22925    0.04817   4.759 1.94e-06 ***
+summary(fit12)#zq60        0.23823    0.04806   4.956 7.18e-07 ***
+summary(fit13)#zq70        0.26591    0.04855   5.477 4.33e-08 ***
+summary(fit14)#zq80        0.29049    0.04904   5.923 3.15e-09 ***
+summary(fit15)#zq90        0.32518    0.04980   6.529 6.62e-11 ***
+summary(fit16)#zcv         0.1807685  0.0514937   3.510 0.000447 ***
 
 #----------------Exploring lidar variables influencing probability of use in M_bra
 
@@ -223,25 +260,45 @@ fit16 = glmer(used ~ zcv + (1|BatID), data=Mbra,
 
 # Use a hypothesis test to determine which variables have strong influence on M.mys 
 # Pass = p < 0.001
+## 2020_analyses-MBRA 
+# #                                   Fixed effects:
+# #                         Estimate  Std.Error  zvalue  Pr(>|z|)  
+# summary(fit1) #(Intercept) -0.02972    0.05452  -0.545    0.586
+# summary(fit2) #zmax         0.29726    0.05737   5.182  2.2e-07 ***
+# summary(fit3) #zmean        0.220823   0.058899   3.749 0.000177 ***
+# summary(fit4) #zsd          0.31289    0.05936   5.271 1.35e-07 *** 
+# summary(fit5) #pzabovezm   -0.25370    0.05798  -4.376 1.21e-05 ***
+# summary(fit6) #pzabove0.5   0.195872   0.057376   3.414 0.000641 ***
+# summary(fit7) #zq10         0.03147    0.05658   0.556    0.578
+# summary(fit8) #zq20        -0.002611   0.056265  -0.046    0.963
+# summary(fit9) #zq30         0.06071    0.05933   1.023    0.306
+# summary(fit10) #zq40        0.16376    0.05993   2.733  0.00628 **
+# summary(fit11) #zq50        0.197435   0.060407   3.268  0.00108 **
+# summary(fit12) #zq60        0.203734   0.060078   3.391 0.000696 ***
+# summary(fit13) #zq70        0.225719   0.059554   3.790 0.000151 ***
+# summary(fit14) #zq80        0.26209    0.05952   4.403 1.07e-05 ***
+# summary(fit15) #zq90        0.27635    0.05853   4.722 2.34e-06 ***
+# summary(fit16) #zcv         0.18216    0.05622   3.240  0.00119 **
 
+# 2023_analyses-MBRA
 #                                   Fixed effects:
-#                         Estimate Std. Error z value Pr(>|z|)  
-summary(fit1)#(Intercept) -0.02972    0.05452  -0.545    0.586
-summary(fit2)#zmax         0.29726    0.05737   5.182  2.2e-07 ***
-summary(fit3)#zmean        0.220823   0.058899   3.749 0.000177 ***
-summary(fit4)#zsd          0.31289    0.05936   5.271 1.35e-07 *** 
-summary(fit5)#pzabovezm   -0.25370    0.05798  -4.376 1.21e-05 ***
-summary(fit6)#pzabove0.5   0.195872   0.057376   3.414 0.000641 ***
-summary(fit7)#zq10         0.03147    0.05658   0.556    0.578
-summary(fit8)#zq20        -0.002611   0.056265  -0.046    0.963
-summary(fit9)#zq30         0.06071    0.05933   1.023    0.306
-summary(fit10)#zq40        0.16376    0.05993   2.733  0.00628 **
-summary(fit11)#zq50        0.197435   0.060407   3.268  0.00108 **
-summary(fit12)#zq60        0.203734   0.060078   3.391 0.000696 ***
-summary(fit13)#zq70        0.225719   0.059554   3.790 0.000151 ***
-summary(fit14)#zq80        0.26209    0.05952   4.403 1.07e-05 ***
-summary(fit15)#zq90        0.27635    0.05853   4.722 2.34e-06 ***
-summary(fit16)#zcv         0.18216    0.05622   3.240  0.00119 **
+#                         Estimate  Std.Error  zvalue  Pr(>|z|)  
+summary(fit1) #(Intercept) -0.02413    0.05493  -0.439     0.66
+summary(fit2) #zmax         0.34744    0.05910   5.879 4.13e-09 ***
+summary(fit3) #zmean        0.27207    0.06128   4.440    9e-06 ***
+summary(fit4) #zsd          0.35673    0.06118   5.831 5.51e-09 *** 
+summary(fit5) #pzabovezm   -0.22114    0.05800  -3.812 0.000138 ***
+summary(fit6) #pzabove0.5   0.195055   0.057645   3.384 0.000715 ***
+summary(fit7) #zq10         0.06195    0.05712   1.085    0.278
+summary(fit8) #zq20         0.06575    0.06010   1.094    0.274
+summary(fit9) #zq30         0.08446    0.06182   1.366    0.172
+summary(fit10) #zq40        0.200987   0.061930   3.245  0.00117 **
+summary(fit11) #zq50        0.232191   0.062298   3.727 0.000194 ***
+summary(fit12) #zq60        0.24145    0.06226   3.878 0.000105 ***
+summary(fit13) #zq70        0.28026    0.06191   4.527 5.98e-06 ***
+summary(fit14) #zq80        0.29742    0.06125   4.856  1.2e-06 ***
+summary(fit15) #zq90        0.32359    0.06037   5.360 8.33e-08 ***
+summary(fit16) #zcv         0.18796    0.05659   3.321 0.000896 ***
 
 #------------Construct models for both species simultanously
 #------------use significant level p<0.01
@@ -249,11 +306,20 @@ summary(fit16)#zcv         0.18216    0.05622   3.240  0.00119 **
 
 #Passed Hypothesis test for M. mys: 
 
+#2020 
 #zmax, zmean, zsd, pzabove0.5, zq40, zq50, zq60, zq70, zq80, zq90, zcv
 
-#Passed Hypothesis test for M. bra:
+#2023
+#zmax,zmean, zsd, pzabove0.5, zq40, zq50, zq60, zq70, zq80, zq90, zcv
 
+
+#Passed Hypothesis test for M. bra
+
+# 2020 
 #zmax, zmean, zsd, pzabovezmean, pzabove0.5, zq60, zq70, zq80, zq90
+
+# 2023
+#zmax, zmean, zsd, pzabovezmean, pzabove0.5, zq40, zq50, zq60, zq70, zq80, zq90, zcv
 
 #Excluding variables that are highly correlated, we are left with:
 
@@ -263,14 +329,23 @@ summary(fit16)#zcv         0.18216    0.05622   3.240  0.00119 **
 Mfull <- glmer(used ~ Species + zmax + zcv + Species:zmax + Species:zcv +  (1|Species/BatID), data=data_2, family=binomial(link="logit"),nAGQ = 0)
 drop1(Mfull, test = "Chi") #Likelihood ratio test
 #Single term deletions
+
+# 2020 
 #Df    AIC     LRT Pr(Chi)
 #<none>          4003.5                
 #Species:zmax  1 4003.6 2.09621  0.1477
 #Species:zcv   1 4002.1 0.57034  0.4501
 
+# 2023: 
+#              npar    AIC     LRT Pr(Chi)
+# <none>            3946.2                
+# Species:zmax    1 3945.6 1.41758  0.2338
+# Species:zcv     1 3944.8 0.55325  0.4570
+
 #Neither of the species / variable interactions were significant, drop both. Cannot be dropped further
 
-M2 <- glmer(used ~ Species + zmax + zcv + (1|Species/BatID), data=data_2, family=binomial(link="logit"),nAGQ = 0)
+M2 <- glmer(used ~ Species + zmax + zcv + (1|Species/BatID), 
+            data=data_2, family=binomial(link="logit"),nAGQ = 0)
 summary(M2)
 
 #Present output in a table in results with 250 resolution 
@@ -307,9 +382,70 @@ summary(M2)
 # SpeciesMys -0.746              
 # zmax        0.146 -0.185       
 # zcv         0.034 -0.021  0.215
+
+
+## 2023 results 
+# 
+# Generalized linear mixed model fit by maximum likelihood (Adaptive Gauss-Hermite Quadrature, nAGQ = 0) ['glmerMod']
+#  Family: binomial  ( logit )
+# Formula: used ~ Species + zmax + zcv + (1 | Species/BatID)
+#    Data: data_2
+# 
+#      AIC      BIC   logLik deviance df.resid 
+#   3943.9   3979.8  -1965.9   3931.9     2939 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -2.9205 -0.8772 -0.7336  0.9380  1.3873 
+# 
+# Random effects:
+#  Groups        Name        Variance Std.Dev.
+#  BatID:Species (Intercept) 0        0       
+#  Species       (Intercept) 0        0       
+# Number of obs: 2945, groups:  BatID:Species, 21; Species, 2
+# 
+# Fixed effects:
+#             Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)  0.06040    0.05705   1.059    0.290    
+# SpeciesMys  -0.12592    0.07742  -1.627    0.104    
+# zmax         0.43969    0.03991  11.018  < 2e-16 ***
+# zcv          0.28215    0.04119   6.851 7.35e-12 ***
+# ---
+# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# 
+# Correlation of Fixed Effects:
+#            (Intr) SpcsMy zmax  
+# SpeciesMys -0.748              
+# zmax        0.152 -0.189       
+# zcv         0.041 -0.027  0.233
+# optimizer (bobyqa) convergence code: 0 (OK)
+# boundary (singular) fit: see help('isSingular')
+
+
 ##refitting model with GLM to scetch results
 fit <- glm(used ~ Species + zmax + zcv, family=binomial(), data=data_2)
 summary(fit) #gives approximately the same parameter estimates as the GLMM,
+
+# Call:
+# glm(formula = used ~ Species + zmax + zcv, family = binomial(), 
+#     data = data_2)
+
+# Coefficients:
+#             Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)  0.06040    0.05705   1.059    0.290    
+# SpeciesMys  -0.12592    0.07742  -1.627    0.104    
+# zmax         0.43969    0.03991  11.018  < 2e-16 ***
+# zcv          0.28215    0.04119   6.851 7.35e-12 ***
+# ---
+# Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+# 
+# (Dispersion parameter for binomial family taken to be 1)
+# 
+#     Null deviance: 4082.5  on 2944  degrees of freedom
+# Residual deviance: 3931.9  on 2941  degrees of freedom
+# AIC: 3939.9
+# 
+# Number of Fisher Scoring iterations: 4
 
 #------------------------------Figure zcv
 
