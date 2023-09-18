@@ -30,6 +30,7 @@ library(lme4)
 library(tidyverse)
 library(kableExtra)
 library(gtsummary)
+library(tidyr)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -343,9 +344,13 @@ drop1(Mfull, test = "Chi") #Likelihood ratio test
 # Species:zcv     1 3944.8 0.55325  0.4570
 
 #Neither of the species / variable interactions were significant, drop both. Cannot be dropped further
-
+library(kableExtra)
+library(broom)
+library(sjPlot)
 M2 <- glmer(used ~ Species + zmax + zcv + (1|Species/BatID), 
-            data=data_2, family=binomial(link="logit"),nAGQ = 0)
+            data=data_2, family=binomial(link="logit"),nAGQ = 0) 
+            
+tab_model(M2)
 summary(M2)
 
 #Present output in a table in results with 250 resolution 
@@ -425,11 +430,11 @@ summary(M2)
 ##refitting model with GLM to scetch results
 fit <- glm(used ~ Species + zmax + zcv, family=binomial(), data=data_2)
 summary(fit) #gives approximately the same parameter estimates as the GLMM,
-
+tab_model(fit)
 # Call:
 # glm(formula = used ~ Species + zmax + zcv, family = binomial(), 
 #     data = data_2)
-
+# 2023 
 # Coefficients:
 #             Estimate Std. Error z value Pr(>|z|)    
 # (Intercept)  0.06040    0.05705   1.059    0.290    
@@ -453,6 +458,7 @@ summary(fit) #gives approximately the same parameter estimates as the GLMM,
 range.zcv <- range(data_2$zcv)
 range.zcv
 #[1] -1.407101  5.535054
+# [1] -1.419065  6.348025
 
 plotting_dfm <- expand.grid(zcv = seq(from=-1.41, to = 5.54, by=0.001),
                             Species    = c("Mbra","Mys"),
