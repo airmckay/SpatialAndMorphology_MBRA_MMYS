@@ -120,7 +120,7 @@ Brandtii <- subset(Bats45, fSpecies == "BRANDTII")
 #https://github.com/Jean-Romain/lidR/wiki/stdmetrics
 
 ##---------- 250 m2 
-stack.r250<-stack("stdmetrics_z.grd")
+stack.r250<- stack("stdmetrics_z.grd")
 object250<- stack.r250
 names(object250) 
 

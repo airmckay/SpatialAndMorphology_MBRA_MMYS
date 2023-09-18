@@ -63,6 +63,20 @@ library(rJava)
 library(beepr)
 library(OpenStreetMap)
 library(lubridate)
+library(rgdal)
+library(munsell)
+library(pillar)
+library(ResourceSelection)
+library(mapview)
+library(amt)
+library(sjPlot)
+library(Rgb)
+library(nloptr)
+library(colorspace)
+library(rlang)
+library(broom) 
+library(MASS)
+
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -196,13 +210,29 @@ Brandtii <- subset(Bats45, Species == "BRANDTII")
 #https://github.com/Jean-Romain/lidR/wiki/stdmetrics
 
 ##---------- 250 m2 
-#removeTmpFiles()
-stack.r250<- stack("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/stdmetrics_z.grd")
-## Heavy file, this can take a moment 
-beep() 
+library(utils)
+library(raster)
+library(ncdf4)
+library(pbdMPI, quiet = TRUE)
+library(RNetCDF, quiet = TRUE)
+library(rgdal)
+removeTmpFiles()
 
-object16<- stack.r16
-names(object16) 
+stack.r250<- stack("stdmetrics_z.grd")
+# Warning message:
+# In .rasterFromRasterFile(grdfile, band = band, objecttype, ...) :
+#   size of values file does not match the number of cells (given the data type)
+# stack.r250<- brick("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/stdmetrics_z.grd")
+# 
+# # Warning message:
+# # In .rasterFromRasterFile(grdfile, band = band, objecttype, ...) :
+# #   size of values file does not match the number of cells (given the data type)
+# stack.r250 <- stretch(stack.r250) # This works 
+# dim(stack.r250)
+# #  180 360   1
+
+object250<- stack.r250
+names(object250) 
 #  [1] "zmax"         "zmean"        "zsd"          "zskew"        "zkurt"        "zentropy"     "pzabovezmean"
 #  [8] "pzabove0.5"   "zq5"          "zq10"         "zq15"         "zq20"         "zq25"         "zq30"        
 # [15] "zq35"         "zq40"         "zq45"         "zq50"         "zq55"         "zq60"         "zq65"        
