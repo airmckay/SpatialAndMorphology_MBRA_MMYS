@@ -118,6 +118,15 @@ table(Bats45$Dir.obs, Bats45$BatID)
 M.mystacinus <- subset(Bats45, Species == "MYSTACINUS")
 M.brandtii <- subset(Bats45, Species == "BRANDTII")
 
+p1 <- ggplot() + 
+  geom_bar(data = M.brandtii, aes(x = BatID), stat = "count", fill = "salmon") +
+  theme_bw() + xlab("") + ylab("Obs < 45 m from the bat") + ggtitle("Myotis brandtii (10 bats, 686 obs)")
+p2 <- ggplot() + 
+  geom_bar(data = M.mystacinus, aes(x = BatID), stat = "count", fill = "lightblue") +
+  theme_bw() + xlab("") + ylab("Obs < 45 m from the bat") + ggtitle("Myotis mystacinus (12 bats, 816 obs)")
+  
+cowplot::plot_grid(p1, p2)
+
 par(mfrow=c(2,1))
 plot(table(M.mystacinus$BatID), main = "Number of plots Mmys", xaxt = "n")
 plot(table(M.brandtii$BatID), main = "Number of plots Mbra")
@@ -2239,6 +2248,8 @@ plot(M_MCP)
 
 ```
 
+
+
 ## Visualizing the mcps 
 ```{r}
 library(lattice)
@@ -2291,6 +2302,7 @@ mapshot( M,
   file = NULL,
   remove_controls = c("zoomControl", "layersControl", "homeButton", "scaleBar",
     "drawToolbar", "easyButton"))
+M
 st_write(sBats45, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/Spatialpt1_2023-09-15/EachBatMCP.gpkg", driver = "GPKG")
 
 # for examples of how to map spatial data in library(ggmap):
