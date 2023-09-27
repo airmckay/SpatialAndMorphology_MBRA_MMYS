@@ -1,0 +1,737 @@
+---
+title: "HomeRangeApproaches"
+output: html_document
+date: "2023-09-27"
+---
+
+# Objectives
+
+- Visualize the home range for each bat from Kernel density plots
+- Visualize the home range for each bat from MCPs 
+- Assign random points in those home ranges (n x 10 for example)
+
+- Evaluate which approach to defining home ranges gives a better picture of how bats may actually use the space. 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+### Prepare the work space
+library(SpatialKDE)
+library(tmap)
+library(tmaptools)
+library(tidyverse)
+library(sp)
+library(sf)
+library(rgeos)
+library(adehabitatMA)
+library(digest)
+library(mime)
+library(jsonlite)
+library(crs)
+library(dplyr)
+library(adehabitatHR)
+library(Rcpp)
+library(raster)
+library(rgdal)
+library(munsell)
+library(tibble)
+library(pillar)
+library(ggplot2)
+library(ResourceSelection)
+library(mapview)
+library(amt)
+library(sjPlot)
+library(Rgb)
+library(nloptr)
+library(colorspace)
+library(rlang)
+library(lattice)
+library(MASS)
+library(dismo)
+library(scales)
+library(rJava)
+library(beepr)
+library(OpenStreetMap)
+library(lubridate)
+library(rgdal)
+library(munsell)
+library(pillar)
+library(ResourceSelection)
+library(mapview)
+library(amt)
+library(sjPlot)
+library(Rgb)
+library(nloptr)
+library(colorspace)
+library(rlang)
+library(broom) 
+library(MASS)
+library(ggmap)
+library(gridExtra)
+library(raster)
+library(leaflet)
+library(terra)
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "HomeRangeExploration"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+
+
+```
+
+
+
+## Import and prepare dataset 
+
+```{r}
+# Import the "onsite" observations of bats 
+Bats45 <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/45%.csv",     
+                     delim = ";", escape_double = FALSE, trim_ws = TRUE)
+
+
+
+str(Bats45)
+dim(Bats45)
+#1502 obs of 8 vars 
+names(Bats45)
+#[1] "Date"     "Time"     "BatID"    "Easting"  "Northing" "BD"       "Dir.obs"  "Gain"     
+
+## Add column for species ID ##
+mystacinus<- Bats45$BatID %in% c("Amelia","Marie", "Turid", "Reeda", "Daisy", "Line", "Stine", "Ethel", "Ragnhild", "Ida", "Louise", "Aricia")
+
+Bats45$Species<-ifelse(mystacinus == TRUE, "MYSTACINUS", "BRANDTII")
+Bats45$Species<- as.factor(Bats45$Species)
+
+## Rename the Dir Obs column to replace the space with a period 
+Bats45 <- Bats45 %>% rename(Dir.obs = "Dir obs")
+
+## Factorize bat ID column as well 
+Bats45$BatID <- as.factor(Bats45$BatID)
+
+summary(Bats45$BatID)
+#Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise    Maren    Marie     Nora   Phoebe Ragnhild    Reeda 
+#16       90       81       83      134      117      119       91       55       64      141       31       49       62       28       70 
+#Sofia   Steffi    Stine     Thea    Turid 
+#39       39       84      101        8 
+
+##The number of onsite plots per individual bat 
+
+table(Bats45$Dir.obs, Bats45$BatID)
+#Yes = onsite plots
+
+
+M.mystacinus <- subset(Bats45, Species == "MYSTACINUS")
+M.brandtii <- subset(Bats45, Species == "BRANDTII")
+
+par(mfrow=c(2,1))
+plot(table(M.mystacinus$BatID), main = "Number of plots Mmys", xaxt = "n")
+plot(table(M.brandtii$BatID), main = "Number of plots Mbra")
+
+#Fix date/time
+
+names(Bats45)[1:2]<-c("date.cap","time.cap")
+
+Bats45$date.cap<-as.character(Bats45$date.cap)
+
+Bats45$time.cap<-as.character(Bats45$time.cap)
+
+#---note: looks like many records are missing date and time data (this is rectified further down in the script)
+
+Bats45$datetime<-paste(Bats45$date.cap,Bats45$time.cap)
+
+head(Bats45$datetime)
+
+# slightly different approach to dateime than in previous analyses
+Bats45$datetime.posix<- as_datetime(Bats45$datetime,format = "%d.%m.%Y %H:%M:%S", tz="CET")
+summary(Bats45)
+
+
+summary(Bats45$Species)
+  # BRANDTII MYSTACINUS 
+  #      686        816 
+
+summary(Bats45$Dir.obs=="Yes"|Bats45$BD=="Yes")
+## Observations when the bats were detected by a handheld heterodyne while tracking 
+#   Mode   FALSE    TRUE 
+# logical     772     730 
+
+summary(Bats45$Dir.obs=="Yes") # Observations where the bat was seen 
+#   Mode   FALSE    TRUE 
+# logical    1040     462
+
+summary(Bats45$BD=="Yes") # Observations where the bat was picked up by a handheld heterodyne 
+#    Mode   FALSE    TRUE 
+# logical     820     682 
+```
+
+
+## Create spatial data frames 
+```{r}
+coords <- coordinates(Bats45)<-Bats45[,c("Easting","Northing")]
+#assigning coordinates 
+
+proj4string(Bats45)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#Define the projection 
+crs(Bats45)
+
+Bats45<-Bats45[!is.na(Bats45$Easting) | !is.na(Bats45$Northing),]
+#Remove NA values  - There were none to remove 
+
+
+## Visualize to check if this worked 
+
+sBats45 <- st_as_sf(Bats45, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+plot(sBats45)
+mapview(sBats45) # This works! 
+ 
+###############################################################################
+
+#Run again to get per species data sets without NA's 
+Mystacinus <- subset(Bats45, Species == "MYSTACINUS")
+Brandtii <- subset(Bats45, Species == "BRANDTII")
+
+### Format so that it is only the Bat ID for each species for home range size
+MMYS <- M.mystacinus %>% dplyr::select(c(BatID, Easting, Northing)) %>% droplevels()
+
+MBRA <- M.brandtii %>% dplyr::select(c(BatID, Easting, Northing)) %>% droplevels()
+
+###############################################################################
+# MMYS
+###############################################################################
+
+Mcoords <- coordinates(MMYS) <- MMYS[,c("Easting","Northing")]
+#assigning coordinates 
+
+proj4string(MMYS)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#Define the projection 
+crs(MMYS)
+
+sMMYS <- st_as_sf(MMYS, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+plot(sMMYS )
+mapview(sMMYS)
+
+###############################################################################
+# MBRA
+###############################################################################
+Bcoords <- coordinates(MBRA)<-MBRA[,c("Easting","Northing")]
+#assigning coordinates 
+
+proj4string(MBRA)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#Define the projection 
+crs(MBRA)
+
+sMBRA <- st_as_sf(MBRA, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+plot(sMBRA )
+mapview(sMBRA)
+
+#writeOGR(MBRA, dsn = "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs", layer = "MBRApts", driver = "ESRI Shapefile")
+
+#MBRAshp <- st_read("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/MBRApts.shp")
+
+
+#####################################################
+library(leafletR)
+library(sp)
+library(KernSmooth)
+library(RColorBrewer)
+
+MBRAll <- spTransform(MBRA, CRS("+proj=longlat"))
+MMYSll <- spTransform(MMYS, CRS("+proj=longlat"))
+#range95ll <- spTransform(MMYS, CRS("+proj=longlat"))
+
+# # Get the latitude and longitudes as a dataframe 
+# MBRAllcoords <- as.data.frame(MBRAll@coords)
+# str(MBRAllcoords)
+# 
+# mbrallcoords <- MBRAllcoords %>% rename(latitude = Northing, longitude = Easting)
+# 
+# d2dB <- bkde2D(cbind(mbrallcoords$longitude, mbrallcoords$latitude), bandwidth = c(1.5, 1.5)) 
+# 
+# contour(d2dB$x1,d2dB$x2,d2dB$fhat)
+
+leaflet() %>% addProviderTiles("Esri.WorldTopoMap") %>% 
+  addCircleMarkers(data = MBRAll, radius = 3, color = "coral", fillOpacity = 0.5) %>% 
+  addCircleMarkers(data = MMYSll, radius = 3, color = "navy", fillOpacity = 0.5) #%>% 
+  #addPolygons(range95ll, color = "gray")
+
+
+
+
+```
+
+
+## Kernel density plots for each individual bat 
+
+https://cran.r-project.org/web/packages/SpatialKDE/vignettes/SpatialKDE.html
+```{r}
+
+bats <- sBats45 # save some typing 
+
+cell_size <- 100
+band_width <- 150
+
+grid_bats <- bats %>% 
+  create_grid_rectangular(cell_size = cell_size, side_offset = band_width)
+
+kde <- bats %>% 
+  kde(band_width = band_width, kernel = "quartic", grid = grid_bats)
+
+tm_shape(kde) +
+  tm_polygons(col = "kde_value", palette = "viridis", title = "KDE Estimate") +
+  tm_shape(bats) +
+  tm_bubbles(size = 0.1, col = "red")
+
+## Now make it a raster 
+
+raster_bats <- bats %>% 
+  create_raster(cell_size = cell_size, side_offset = band_width)
+
+kder <- bats %>% 
+  kde(band_width = band_width, kernel = "triweight", grid = raster_bats)
+
+tm_shape(kder) +
+  tm_raster(palette = "viridis", title = "KDE Estimate") +
+  tm_shape(bats) +
+  tm_bubbles(size = 0.1, col = "red") +
+  tm_layout(legend.outside = TRUE)
+
+```
+
+
+## Alertnative approach 
+https://rpubs.com/titin/KDEinR
+```{r}
+
+kde.output <- kernelUD(Bats45, h="href", grid = 1000)
+
+plot(kde.output)
+
+kde <- raster(kde.output)
+# sets projection to British National Grid
+projection(kde) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+
+# maps the raster in tmap, "ud" is the density variable
+tm_shape(kde) + tm_raster("ud")
+
+
+bound_box <- bb(Bats45, ext = 1.5)
+tm_shape(kde, bbox = bound_box) + tm_raster("ud")
+
+
+masked_kde <- mask(kde, Bats45)
+
+# maps the masked raster, also maps white output area boundaries
+tm_shape(masked_kde, bbox = bound_box) + 
+  tm_raster("ud", style = "quantile", n = 100, legend.show = FALSE, palette = "YlGnBu") 
+
+
+range95 <- getverticeshr(kde.output, percent = 95)
+
+tm_shape(Bats45) + tm_dots(col = "blue") +
+tm_shape(range95) + tm_borders(alpha=.7, col = "#fb6a4a", lwd = 2) + tm_fill(alpha=.1, col = "#fb6a4a") +
+tm_layout(frame = FALSE)
+
+```
+
+
+
+
+### Now try to make individual Kernels for each bat species 
+```{r}
+##################################
+## MBRA
+##################################
+
+#MBRA <- MBRA[,-c(2,3)] 
+kde.outputB <- kernelUD(MBRA, h="href", grid = 1000)
+
+plot(kde.outputB)
+
+kdeB <- raster(kde.outputB)
+
+# sets projection to British National Grid
+projection(kdeB) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+
+# maps the raster in tmap, "ud" is the density variable
+tm_shape(kdeB) + tm_raster("ud")
+
+
+#bound_box <- bb(Bats45, ext = 1.5) # use the same for all images 
+tm_shape(kdeB, bbox = bound_box) + tm_raster("ud")
+
+
+masked_kdeB <- mask(kdeB, MBRA)
+
+# maps the masked raster, also maps white output area boundaries
+tm_shape(masked_kdeB, bbox = bound_box) + 
+  tm_raster("ud", style = "quantile", n = 100, legend.show = FALSE, palette = "YlGnBu") 
+
+
+range95B <- getverticeshr(kde.outputB, percent = 95)
+
+tm_shape(MBRA, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95B) + tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") 
+# MBRA_95totalKernel.jpg
+
+##################################
+## MMYS
+##################################
+
+kde.outputM <- kernelUD(MMYS, h="href", grid = 1000)
+
+plot(kde.outputM)
+
+kdeM <- raster(kde.outputM)
+
+# sets projection to British National Grid
+projection(kdeM) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+# maps the raster in tmap, "ud" is the density variable
+tm_shape(kdeM) + tm_raster("ud")
+
+# use the same for all images 
+tm_shape(kdeM, bbox = bound_box) + tm_raster("ud")
+
+masked_kdeM <- mask(kdeM, MMYS)
+
+# maps the masked raster, also maps white output area boundaries
+tm_shape(masked_kdeM, bbox = bound_box) + 
+  tm_raster("ud", style = "quantile", n = 100, legend.show = FALSE, palette = "YlGnBu") 
+
+range95M <- getverticeshr(kde.outputM, percent = 95)
+
+tm_shape(MMYS, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "turquoise") +
+tm_shape(range95M) + tm_borders(alpha=.7, col = "turquoise", lwd = 2) + 
+  tm_fill(alpha=.1, col = "turquoise") 
+# MBRA_95totalKernel.jpg
+```
+
+
+## Create a 95% kernel for each individual bat 
+
+## MBRA bats 
+levels(MBRA$BatID)
+"Astrid" "Dagny"  "Kaja"   "Maren"  "Nora"   "Phoebe" "Sofia"  "Steffi" "Thea"  
+
+```{r}
+## Astrid 
+Astrid <- subset(MBRA, BatID == "Astrid") 
+Astrid@data$BatID <- droplevels(Astrid@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Astrid)
+
+kde.outputAstrid <- kernelUD(Astrid, h="href", grid = 1000)
+
+plot(kde.outputAstrid)
+
+kdeAstrid <- raster(kde.outputAstrid)
+
+# sets projection to British National Grid
+projection(kdeAstrid) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeAstrid <- mask(kdeAstrid, Astrid)
+
+range95Astrid <- getverticeshr(kde.outputAstrid, percent = 75)
+
+tm_shape(Astrid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Astrid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+#################################################
+
+## Dagny 
+Dagny <- subset(MBRA, BatID == "Dagny") 
+Dagny@data$BatID <- droplevels(Dagny@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Dagny)
+
+kde.outputDagny <- kernelUD(Dagny, h="href", grid = 1000)
+
+plot(kde.outputDagny)
+
+kdeDagny <- raster(kde.outputDagny)
+
+# sets projection to British National Grid
+projection(kdeDagny) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeDagny <- mask(kdeDagny, Dagny)
+
+range95Dagny <- getverticeshr(kde.outputDagny, percent = 95)
+
+tm_shape(Dagny, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Dagny) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+#################################################
+
+## Kaja 
+Kaja <- subset(MBRA, BatID == "Kaja") 
+Kaja@data$BatID <- droplevels(Kaja@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Kaja)
+
+kde.outputKaja <- kernelUD(Kaja, h="href", grid = 1000)
+
+plot(kde.outputKaja)
+
+kdeKaja <- raster(kde.outputKaja)
+
+# sets projection to British National Grid
+projection(kdeKaja) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeKaja <- mask(kdeKaja, Kaja)
+
+range95Kaja <- getverticeshr(kde.outputKaja, percent = 75)
+
+tm_shape(Kaja, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Kaja) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+#################################################
+
+## Maren 
+Maren <- subset(MBRA, BatID == "Maren") 
+Maren@data$BatID <- droplevels(Maren@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Maren)
+
+kde.outputMaren <- kernelUD(Maren, h="href", grid = 1000)
+
+plot(kde.outputMaren)
+
+kdeMaren <- raster(kde.outputMaren)
+
+# sets projection to British National Grid
+projection(kdeMaren) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeMaren <- mask(kdeMaren, Maren)
+
+range95Maren <- getverticeshr(kde.outputMaren, percent = 95)
+
+tm_shape(Maren, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Maren) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+#################################################
+
+## Nora 
+Nora <- subset(MBRA, BatID == "Nora") 
+Nora@data$BatID <- droplevels(Nora@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Nora)
+
+kde.outputNora <- kernelUD(Nora, h="href", grid = 1000)
+
+plot(kde.outputNora)
+
+kdeNora <- raster(kde.outputNora)
+
+# sets projection to British National Grid
+projection(kdeNora) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeNora <- mask(kdeNora, Nora)
+
+range95Nora <- getverticeshr(kde.outputNora, percent = 75)
+
+tm_shape(Nora, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Nora) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+
+#################################################
+
+## Phoebe 
+Phoebe <- subset(MBRA, BatID == "Phoebe") 
+Phoebe@data$BatID <- droplevels(Phoebe@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Phoebe)
+
+kde.outputPhoebe <- kernelUD(Phoebe, h="href", grid = 1000)
+
+plot(kde.outputPhoebe)
+
+kdePhoebe <- raster(kde.outputPhoebe)
+
+# sets projection to British National Grid
+projection(kdePhoebe) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdePhoebe <- mask(kdePhoebe, Phoebe)
+
+range95Phoebe <- getverticeshr(kde.outputPhoebe, percent = 75)
+
+tm_shape(Phoebe, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Phoebe) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+
+#################################################
+
+## Sofia 
+Sofia <- subset(MBRA, BatID == "Sofia") 
+Sofia@data$BatID <- droplevels(Sofia@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Sofia)
+
+kde.outputSofia <- kernelUD(Sofia, h="href", grid = 1000)
+
+plot(kde.outputSofia)
+
+kdeSofia <- raster(kde.outputSofia)
+
+# sets projection to British National Grid
+projection(kdeSofia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeSofia <- mask(kdeSofia, Sofia)
+
+range95Sofia <- getverticeshr(kde.outputSofia, percent = 75)
+
+tm_shape(Sofia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Sofia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+#################################################
+
+## Steffi 
+Steffi <- subset(MBRA, BatID == "Steffi") 
+Steffi@data$BatID <- droplevels(Steffi@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Steffi)
+
+kde.outputSteffi <- kernelUD(Steffi, h="href", grid = 1000)
+
+plot(kde.outputSteffi)
+
+kdeSteffi <- raster(kde.outputSteffi)
+
+# sets projection to British National Grid
+projection(kdeSteffi) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeSteffi <- mask(kdeSteffi, Steffi)
+
+range95Steffi <- getverticeshr(kde.outputSteffi, percent = 75)
+
+tm_shape(Steffi, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Steffi) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+#################################################
+
+## Thea 
+Thea <- subset(MBRA, BatID == "Thea") 
+Thea@data$BatID <- droplevels(Thea@data$BatID) # Remove the empty levels of other MBRA bats
+
+str(MBRA)
+str(Thea)
+
+kde.outputThea <- kernelUD(Thea, h="href", grid = 1000)
+
+plot(kde.outputThea)
+
+kdeThea <- raster(kde.outputThea)
+
+# sets projection to British National Grid
+projection(kdeThea) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeThea <- mask(kdeThea, Thea)
+
+range95Thea <- getverticeshr(kde.outputThea, percent = 75)
+
+tm_shape(Thea, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Thea) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE)
+# image plots of 95, 85 and 75 kernels
+
+
+
+
+```
+
+
