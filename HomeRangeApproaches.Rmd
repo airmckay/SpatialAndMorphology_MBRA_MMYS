@@ -75,6 +75,10 @@ library(gridExtra)
 library(raster)
 library(leaflet)
 library(terra)
+library(KernSmooth)
+library(RColorBrewer)
+library(cowplot)
+library(colorBlindness)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -103,10 +107,10 @@ output_today
 
 ```{r}
 # Import the "onsite" observations of bats 
-Bats45 <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/45%.csv",     
+Bats <- read_delim("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Spatial and Morphology/Inputs/45%.csv",     
                      delim = ";", escape_double = FALSE, trim_ws = TRUE)
 
-
+Bats45 <- Bats
 
 str(Bats45)
 dim(Bats45)
@@ -183,6 +187,30 @@ summary(Bats45$BD=="Yes") # Observations where the bat was picked up by a handhe
 ```
 
 
+### Decide on a color palette
+```{r}
+bugcolors <- c(
+  "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#DE597C", "#2B9B81", "#FE9B00")
+
+### Conisdering using dark light blue and dark blue for brandts and mystacinus 
+batcolors <- c("#32a5ff", "#011f4b")
+#                MBRA      MMYS
+batbugc <- c(
+  "#D8443C", "#9F5691", "#633372", 
+    "#E87E8B", "#92C051", "#1F6E9C",
+    "#F4C40F", "#DE597C", "#2B9B81", "#FE9B00", 
+  "#32a5ff", "#011f4b") 
+
+displayColors(batcolors)
+
+cvdPlot(replacePlotColor(
+  displayColors(batbugc))) 
+
+```
+
+
 ## Create spatial data frames 
 ```{r}
 coords <- coordinates(Bats45)<-Bats45[,c("Easting","Northing")]
@@ -248,10 +276,7 @@ mapview(sMBRA)
 
 
 #####################################################
-library(leafletR)
-library(sp)
-library(KernSmooth)
-library(RColorBrewer)
+
 
 MBRAll <- spTransform(MBRA, CRS("+proj=longlat"))
 MMYSll <- spTransform(MMYS, CRS("+proj=longlat"))
@@ -267,9 +292,9 @@ MMYSll <- spTransform(MMYS, CRS("+proj=longlat"))
 # 
 # contour(d2dB$x1,d2dB$x2,d2dB$fhat)
 
-leaflet() %>% addProviderTiles("Esri.WorldTopoMap") %>% 
-  addCircleMarkers(data = MBRAll, radius = 3, color = "coral", fillOpacity = 0.5) %>% 
-  addCircleMarkers(data = MMYSll, radius = 3, color = "navy", fillOpacity = 0.5) #%>% 
+leaflet() %>% addProviderTiles("CartoDB.VoyagerLabelsUnder") %>% 
+  addCircleMarkers(data = MBRAll, radius = 3, color = "#32a5ff", fillOpacity = 0.5) %>% 
+  addCircleMarkers(data = MMYSll, radius = 3, color = "#011f4b", fillOpacity = 0.5) #%>% 
   #addPolygons(range95ll, color = "gray")
 
 
@@ -283,35 +308,35 @@ leaflet() %>% addProviderTiles("Esri.WorldTopoMap") %>%
 https://cran.r-project.org/web/packages/SpatialKDE/vignettes/SpatialKDE.html
 ```{r}
 
-bats <- sBats45 # save some typing 
-
-cell_size <- 100
-band_width <- 150
-
-grid_bats <- bats %>% 
-  create_grid_rectangular(cell_size = cell_size, side_offset = band_width)
-
-kde <- bats %>% 
-  kde(band_width = band_width, kernel = "quartic", grid = grid_bats)
-
-tm_shape(kde) +
-  tm_polygons(col = "kde_value", palette = "viridis", title = "KDE Estimate") +
-  tm_shape(bats) +
-  tm_bubbles(size = 0.1, col = "red")
-
-## Now make it a raster 
-
-raster_bats <- bats %>% 
-  create_raster(cell_size = cell_size, side_offset = band_width)
-
-kder <- bats %>% 
-  kde(band_width = band_width, kernel = "triweight", grid = raster_bats)
-
-tm_shape(kder) +
-  tm_raster(palette = "viridis", title = "KDE Estimate") +
-  tm_shape(bats) +
-  tm_bubbles(size = 0.1, col = "red") +
-  tm_layout(legend.outside = TRUE)
+# bats <- sBats45 # save some typing 
+# 
+# cell_size <- 100
+# band_width <- 150
+# 
+# grid_bats <- bats %>% 
+#   create_grid_rectangular(cell_size = cell_size, side_offset = band_width)
+# 
+# kde <- bats %>% 
+#   kde(band_width = band_width, kernel = "quartic", grid = grid_bats)
+# 
+# tm_shape(kde) +
+#   tm_polygons(col = "kde_value", palette = "viridis", title = "KDE Estimate") +
+#   tm_shape(bats) +
+#   tm_bubbles(size = 0.1, col = "red")
+# 
+# ## Now make it a raster 
+# 
+# raster_bats <- bats %>% 
+#   create_raster(cell_size = cell_size, side_offset = band_width)
+# 
+# kder <- bats %>% 
+#   kde(band_width = band_width, kernel = "triweight", grid = raster_bats)
+# 
+# tm_shape(kder) +
+#   tm_raster(palette = "viridis", title = "KDE Estimate") +
+#   tm_shape(bats) +
+#   tm_bubbles(size = 0.1, col = "red") +
+#   tm_layout(legend.outside = TRUE)
 
 ```
 
@@ -346,9 +371,10 @@ tm_shape(masked_kde, bbox = bound_box) +
 
 range95 <- getverticeshr(kde.output, percent = 95)
 
-tm_shape(Bats45) + tm_dots(col = "blue") +
-tm_shape(range95) + tm_borders(alpha=.7, col = "#fb6a4a", lwd = 2) + tm_fill(alpha=.1, col = "#fb6a4a") +
-tm_layout(frame = FALSE)
+tm_shape(Bats45, bbox = bound_box) + tm_dots(col = "blue") +
+  tm_shape(range95) + tm_borders(alpha=.7, col = "#fb6a4a", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#fb6a4a") +
+  tm_layout(frame = FALSE)
 
 ```
 
@@ -459,17 +485,64 @@ projection(kdeAstrid) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeAstrid <- mask(kdeAstrid, Astrid)
 
-range95Astrid <- getverticeshr(kde.outputAstrid, percent = 75)
+## Different home range estimations 
+range75Astrid <- getverticeshr(kde.outputAstrid, percent = 75)
+range85Astrid <- getverticeshr(kde.outputAstrid, percent = 85)
+range90Astrid <- getverticeshr(kde.outputAstrid, percent = 90)
+range95Astrid <- getverticeshr(kde.outputAstrid, percent = 95)
 
-tm_shape(Astrid, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Astrid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Astrid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Astrid 75%")
+
+p85 <- tm_shape(Astrid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Astrid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Astrid 85%")
+
+p90 <- tm_shape(Astrid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Astrid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Astrid 90%")
+
+p95 <- tm_shape(Astrid, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Astrid) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Astrid 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+# 
+# Warning message:
+# The shape range95Astrid is invalid (after reprojection). See sf::st_is_valid 
 
 #################################################
 
@@ -491,17 +564,67 @@ projection(kdeDagny) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeDagny <- mask(kdeDagny, Dagny)
 
+## Different home range estimations 
+range75Dagny <- getverticeshr(kde.outputDagny, percent = 75)
+range85Dagny <- getverticeshr(kde.outputDagny, percent = 85)
+range90Dagny <- getverticeshr(kde.outputDagny, percent = 90)
 range95Dagny <- getverticeshr(kde.outputDagny, percent = 95)
 
-tm_shape(Dagny, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Dagny, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Dagny) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Dagny 75%")
+
+p85 <- tm_shape(Dagny, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Dagny) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Dagny 85%")
+
+p90 <- tm_shape(Dagny, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Dagny) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Dagny 90%")
+
+p95 <- tm_shape(Dagny, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Dagny) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Dagny 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 # image plots of 95, 85 and 75 kernels
+
+# Warning messages:
+# 1: The shape range85Dagny is invalid (after reprojection). See sf::st_is_valid 
+# 2: The shape range90Dagny is invalid (after reprojection). See sf::st_is_valid 
+# 3: The shape range95Dagny is invalid (after reprojection). See sf::st_is_valid 
 
 #################################################
 
@@ -523,17 +646,61 @@ projection(kdeKaja) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeKaja <- mask(kdeKaja, Kaja)
 
-range95Kaja <- getverticeshr(kde.outputKaja, percent = 75)
+## Different home range estimations 
+range75Kaja <- getverticeshr(kde.outputKaja, percent = 75)
+range85Kaja <- getverticeshr(kde.outputKaja, percent = 85)
+range90Kaja <- getverticeshr(kde.outputKaja, percent = 90)
+range95Kaja <- getverticeshr(kde.outputKaja, percent = 95)
 
-tm_shape(Kaja, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Kaja, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Kaja) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Kaja 75%")
+
+p85 <- tm_shape(Kaja, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Kaja) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Kaja 85%")
+
+p90 <- tm_shape(Kaja, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Kaja) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Kaja 90%")
+
+p95 <- tm_shape(Kaja, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Kaja) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Kaja 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 #################################################
 
@@ -555,17 +722,61 @@ projection(kdeMaren) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeMaren <- mask(kdeMaren, Maren)
 
+## Different home range estimations 
+range75Maren <- getverticeshr(kde.outputMaren, percent = 75)
+range85Maren <- getverticeshr(kde.outputMaren, percent = 85)
+range90Maren <- getverticeshr(kde.outputMaren, percent = 90)
 range95Maren <- getverticeshr(kde.outputMaren, percent = 95)
 
-tm_shape(Maren, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Maren, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Maren) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Maren 75%")
+
+p85 <- tm_shape(Maren, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Maren) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Maren 85%")
+
+p90 <- tm_shape(Maren, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Maren) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Maren 90%")
+
+p95 <- tm_shape(Maren, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Maren) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Maren 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 #################################################
 
@@ -587,17 +798,61 @@ projection(kdeNora) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeNora <- mask(kdeNora, Nora)
 
-range95Nora <- getverticeshr(kde.outputNora, percent = 75)
+## Different home range estimations 
+range75Nora <- getverticeshr(kde.outputNora, percent = 75)
+range85Nora <- getverticeshr(kde.outputNora, percent = 85)
+range90Nora <- getverticeshr(kde.outputNora, percent = 90)
+range95Nora <- getverticeshr(kde.outputNora, percent = 95)
 
-tm_shape(Nora, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Nora, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Nora) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Nora 75%")
+
+p85 <- tm_shape(Nora, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Nora) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Nora 85%")
+
+p90 <- tm_shape(Nora, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Nora) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Nora 90%")
+
+p95 <- tm_shape(Nora, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Nora) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Nora 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 
 #################################################
@@ -620,17 +875,61 @@ projection(kdePhoebe) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdePhoebe <- mask(kdePhoebe, Phoebe)
 
-range95Phoebe <- getverticeshr(kde.outputPhoebe, percent = 75)
+## Different home range estimations 
+range75Phoebe <- getverticeshr(kde.outputPhoebe, percent = 75)
+range85Phoebe <- getverticeshr(kde.outputPhoebe, percent = 85)
+range90Phoebe <- getverticeshr(kde.outputPhoebe, percent = 90)
+range95Phoebe <- getverticeshr(kde.outputPhoebe, percent = 95)
 
-tm_shape(Phoebe, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Phoebe, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Phoebe) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Phoebe 75%")
+
+p85 <- tm_shape(Phoebe, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Phoebe) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Phoebe 85%")
+
+p90 <- tm_shape(Phoebe, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Phoebe) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Phoebe 90%")
+
+p95 <- tm_shape(Phoebe, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Phoebe) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Phoebe 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 
 #################################################
@@ -653,17 +952,61 @@ projection(kdeSofia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +n
 
 masked_kdeSofia <- mask(kdeSofia, Sofia)
 
-range95Sofia <- getverticeshr(kde.outputSofia, percent = 75)
+## Different home range estimations 
+range75Sofia <- getverticeshr(kde.outputSofia, percent = 75)
+range85Sofia <- getverticeshr(kde.outputSofia, percent = 85)
+range90Sofia <- getverticeshr(kde.outputSofia, percent = 90)
+range95Sofia <- getverticeshr(kde.outputSofia, percent = 95)
 
-tm_shape(Sofia, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Sofia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Sofia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Sofia 75%")
+
+p85 <- tm_shape(Sofia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Sofia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Sofia 85%")
+
+p90 <- tm_shape(Sofia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Sofia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Sofia 90%")
+
+p95 <- tm_shape(Sofia, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Sofia) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Sofia 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 #################################################
 
@@ -685,17 +1028,61 @@ projection(kdeSteffi) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +
 
 masked_kdeSteffi <- mask(kdeSteffi, Steffi)
 
-range95Steffi <- getverticeshr(kde.outputSteffi, percent = 75)
+## Different home range estimations 
+range75Steffi <- getverticeshr(kde.outputSteffi, percent = 75)
+range85Steffi <- getverticeshr(kde.outputSteffi, percent = 85)
+range90Steffi <- getverticeshr(kde.outputSteffi, percent = 90)
+range95Steffi <- getverticeshr(kde.outputSteffi, percent = 95)
 
-tm_shape(Steffi, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Steffi, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Steffi) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Steffi 75%")
+
+p85 <- tm_shape(Steffi, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Steffi) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Steffi 85%")
+
+p90 <- tm_shape(Steffi, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Steffi) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Steffi 90%")
+
+p95 <- tm_shape(Steffi, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Steffi) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
-# image plots of 95, 85 and 75 kernels
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Steffi 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 #################################################
 
@@ -717,21 +1104,1326 @@ projection(kdeThea) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no
 
 masked_kdeThea <- mask(kdeThea, Thea)
 
-range95Thea <- getverticeshr(kde.outputThea, percent = 75)
+## Different home range estimations 
+range75Thea <- getverticeshr(kde.outputThea, percent = 75)
+#range75Thea <- st_is_valid(getverticeshr(kde.outputThea, percent = 75))
+range85Thea <- getverticeshr(kde.outputThea, percent = 85)
+range90Thea <- getverticeshr(kde.outputThea, percent = 90)
+range95Thea <- getverticeshr(kde.outputThea, percent = 95)
 
-tm_shape(Thea, bbox = bound_box) + 
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Thea, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+  tm_shape(range75Thea) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Thea 75%")
+p75
+
+p85 <- tm_shape(Thea, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Thea) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Thea 85%")
+
+p90 <- tm_shape(Thea, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Thea) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Thea 90%")
+
+p95 <- tm_shape(Thea, bbox = bound_box) + 
   tmap_mode('view') +
   tm_basemap("Esri.WorldTopoMap") +
   tm_dots(col = "salmon") +
 tm_shape(range95Thea) + 
   tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
   tm_fill(alpha=.1, col = "salmon") +
-  tmap_options(check.and.fix = TRUE)
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Thea 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+```
+
+## MMYS bats
+
+levels(MMYS@data$BatID)
+ # [1] "Amelia"   "Aricia"   "Daisy"    "Ethel"    "Ida"      "Line"     "Louise"   "Marie"   
+ # [9] "Ragnhild" "Reeda"    "Stine"    "Turid" 
+
+```{r}
+
+## Amelia 
+Amelia <- subset(MMYS, BatID == "Amelia") 
+Amelia@data$BatID <- droplevels(Amelia@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Amelia)
+
+kde.outputAmelia <- kernelUD(Amelia, h="href", grid = 1000)
+
+plot(kde.outputAmelia)
+
+kdeAmelia <- raster(kde.outputAmelia)
+
+# sets projection to British National Grid
+projection(kdeAmelia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeAmelia <- mask(kdeAmelia, Amelia)
+
+## Different home range estimations 
+range75Amelia <- getverticeshr(kde.outputAmelia, percent = 75)
+range85Amelia <- getverticeshr(kde.outputAmelia, percent = 85)
+range90Amelia <- getverticeshr(kde.outputAmelia, percent = 90)
+range95Amelia <- getverticeshr(kde.outputAmelia, percent = 95)
+
+
 # image plots of 95, 85 and 75 kernels
 
+p75 <- tm_shape(Amelia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Amelia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Amelia 75%")
 
+p85 <- tm_shape(Amelia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Amelia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Amelia 85%")
+
+p90 <- tm_shape(Amelia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Amelia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Amelia 90%")
+
+p95 <- tm_shape(Amelia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Amelia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Amelia 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+# 
+#################################################
+
+## Aricia 
+Aricia <- subset(MMYS, BatID == "Aricia") 
+Aricia@data$BatID <- droplevels(Aricia@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Aricia)
+
+kde.outputAricia <- kernelUD(Aricia, h="href", grid = 1000)
+
+plot(kde.outputAricia)
+
+kdeAricia <- raster(kde.outputAricia)
+
+# sets projection to British National Grid
+projection(kdeAricia) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeAricia <- mask(kdeAricia, Aricia)
+
+## Different home range estimations 
+range75Aricia <- getverticeshr(kde.outputAricia, percent = 75)
+range85Aricia <- getverticeshr(kde.outputAricia, percent = 85)
+range90Aricia <- getverticeshr(kde.outputAricia, percent = 90)
+range95Aricia <- getverticeshr(kde.outputAricia, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Aricia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Aricia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Aricia 75%")
+
+p85 <- tm_shape(Aricia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Aricia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Aricia 85%")
+
+p90 <- tm_shape(Aricia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Aricia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Aricia 90%")
+
+p95 <- tm_shape(Aricia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Aricia) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Aricia 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+# 
+#########################################################
+
+## Daisy 
+Daisy <- subset(MMYS, BatID == "Daisy") 
+Daisy@data$BatID <- droplevels(Daisy@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Daisy)
+
+kde.outputDaisy <- kernelUD(Daisy, h="href", grid = 1000)
+
+plot(kde.outputDaisy)
+
+kdeDaisy <- raster(kde.outputDaisy)
+
+# sets projection to British National Grid
+projection(kdeDaisy) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeDaisy <- mask(kdeDaisy, Daisy)
+
+## Different home range estimations 
+range75Daisy <- getverticeshr(kde.outputDaisy, percent = 75)
+range85Daisy <- getverticeshr(kde.outputDaisy, percent = 85)
+range90Daisy <- getverticeshr(kde.outputDaisy, percent = 90)
+range95Daisy <- getverticeshr(kde.outputDaisy, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Daisy, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Daisy) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Daisy 75%")
+
+p85 <- tm_shape(Daisy, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Daisy) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Daisy 85%")
+
+p90 <- tm_shape(Daisy, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Daisy) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Daisy 90%")
+
+p95 <- tm_shape(Daisy, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Daisy) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Daisy 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Ethel 
+Ethel <- subset(MMYS, BatID == "Ethel") 
+Ethel@data$BatID <- droplevels(Ethel@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Ethel)
+
+kde.outputEthel <- kernelUD(Ethel, h="href", grid = 1000)
+
+plot(kde.outputEthel)
+
+kdeEthel <- raster(kde.outputEthel)
+
+# sets projection to British National Grid
+projection(kdeEthel) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeEthel <- mask(kdeEthel, Ethel)
+
+## Different home range estimations 
+range75Ethel <- getverticeshr(kde.outputEthel, percent = 75)
+range85Ethel <- getverticeshr(kde.outputEthel, percent = 85)
+range90Ethel <- getverticeshr(kde.outputEthel, percent = 90)
+range95Ethel <- getverticeshr(kde.outputEthel, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Ethel, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Ethel) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ethel 75%")
+
+p85 <- tm_shape(Ethel, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Ethel) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ethel 85%")
+
+p90 <- tm_shape(Ethel, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Ethel) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ethel 90%")
+
+p95 <- tm_shape(Ethel, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Ethel) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ethel 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Ida 
+Ida <- subset(MMYS, BatID == "Ida") 
+Ida@data$BatID <- droplevels(Ida@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Ida)
+
+kde.outputIda <- kernelUD(Ida, h="href", grid = 1000)
+
+plot(kde.outputIda)
+
+kdeIda <- raster(kde.outputIda)
+
+# sets projection to British National Grid
+projection(kdeIda) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeIda <- mask(kdeIda, Ida)
+
+## Different home range estimations 
+range75Ida <- getverticeshr(kde.outputIda, percent = 75)
+range85Ida <- getverticeshr(kde.outputIda, percent = 85)
+range90Ida <- getverticeshr(kde.outputIda, percent = 90)
+range95Ida <- getverticeshr(kde.outputIda, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Ida, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Ida) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ida 75%")
+
+p85 <- tm_shape(Ida, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Ida) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ida 85%")
+
+p90 <- tm_shape(Ida, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Ida) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ida 90%")
+
+p95 <- tm_shape(Ida, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Ida) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ida 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Line 
+Line <- subset(MMYS, BatID == "Line") 
+Line@data$BatID <- droplevels(Line@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Line)
+
+kde.outputLine <- kernelUD(Line, h="href", grid = 1000)
+
+plot(kde.outputLine)
+
+kdeLine <- raster(kde.outputLine)
+
+# sets projection to British National Grid
+projection(kdeLine) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeLine <- mask(kdeLine, Line)
+
+## Different home range estimations 
+range75Line <- getverticeshr(kde.outputLine, percent = 75)
+range85Line <- getverticeshr(kde.outputLine, percent = 85)
+range90Line <- getverticeshr(kde.outputLine, percent = 90)
+range95Line <- getverticeshr(kde.outputLine, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Line, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Line) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Line 75%")
+
+p85 <- tm_shape(Line, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Line) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Line 85%")
+
+p90 <- tm_shape(Line, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Line) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Line 90%")
+
+p95 <- tm_shape(Line, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Line) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Line 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Louise 
+Louise <- subset(MMYS, BatID == "Louise") 
+Louise@data$BatID <- droplevels(Louise@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Louise)
+
+kde.outputLouise <- kernelUD(Louise, h="href", grid = 1000)
+
+plot(kde.outputLouise)
+
+kdeLouise <- raster(kde.outputLouise)
+
+# sets projection to British National Grid
+projection(kdeLouise) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeLouise <- mask(kdeLouise, Louise)
+
+## Different home range estimations 
+range75Louise <- getverticeshr(kde.outputLouise, percent = 75)
+range85Louise <- getverticeshr(kde.outputLouise, percent = 85)
+range90Louise <- getverticeshr(kde.outputLouise, percent = 90)
+range95Louise <- getverticeshr(kde.outputLouise, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Louise, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Louise) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Louise 75%")
+
+p85 <- tm_shape(Louise, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Louise) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Louise 85%")
+
+p90 <- tm_shape(Louise, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Louise) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Louise 90%")
+
+p95 <- tm_shape(Louise, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Louise) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Louise 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Marie 
+Marie <- subset(MMYS, BatID == "Marie") 
+Marie@data$BatID <- droplevels(Marie@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Marie)
+
+kde.outputMarie <- kernelUD(Marie, h="href", grid = 1000)
+
+plot(kde.outputMarie)
+
+kdeMarie <- raster(kde.outputMarie)
+
+# sets projection to British National Grid
+projection(kdeMarie) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeMarie <- mask(kdeMarie, Marie)
+
+## Different home range estimations 
+range75Marie <- getverticeshr(kde.outputMarie, percent = 75)
+range85Marie <- getverticeshr(kde.outputMarie, percent = 85)
+range90Marie <- getverticeshr(kde.outputMarie, percent = 90)
+range95Marie <- getverticeshr(kde.outputMarie, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Marie, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Marie) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Marie 75%")
+
+p85 <- tm_shape(Marie, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Marie) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Marie 85%")
+
+p90 <- tm_shape(Marie, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Marie) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Marie 90%")
+
+p95 <- tm_shape(Marie, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Marie) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Marie 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Ragnhild 
+Ragnhild <- subset(MMYS, BatID == "Ragnhild") 
+Ragnhild@data$BatID <- droplevels(Ragnhild@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Ragnhild)
+
+kde.outputRagnhild <- kernelUD(Ragnhild, h="href", grid = 1000)
+
+plot(kde.outputRagnhild)
+
+kdeRagnhild <- raster(kde.outputRagnhild)
+
+# sets projection to British National Grid
+projection(kdeRagnhild) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeRagnhild <- mask(kdeRagnhild, Ragnhild)
+
+## Different home range estimations 
+range75Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 75)
+range85Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 85)
+range90Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 90)
+range95Ragnhild <- getverticeshr(kde.outputRagnhild, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Ragnhild, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Ragnhild) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ragnhild 75%")
+
+p85 <- tm_shape(Ragnhild, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Ragnhild) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ragnhild 85%")
+
+p90 <- tm_shape(Ragnhild, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Ragnhild) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ragnhild 90%")
+
+p95 <- tm_shape(Ragnhild, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Ragnhild) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Ragnhild 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Reeda 
+Reeda <- subset(MMYS, BatID == "Reeda") 
+Reeda@data$BatID <- droplevels(Reeda@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Reeda)
+
+kde.outputReeda <- kernelUD(Reeda, h="href", grid = 1000)
+
+plot(kde.outputReeda)
+
+kdeReeda <- raster(kde.outputReeda)
+
+# sets projection to British National Grid
+projection(kdeReeda) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeReeda <- mask(kdeReeda, Reeda)
+
+## Different home range estimations 
+range75Reeda <- getverticeshr(kde.outputReeda, percent = 75)
+range85Reeda <- getverticeshr(kde.outputReeda, percent = 85)
+range90Reeda <- getverticeshr(kde.outputReeda, percent = 90)
+range95Reeda <- getverticeshr(kde.outputReeda, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Reeda, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Reeda) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Reeda 75%")
+
+p85 <- tm_shape(Reeda, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Reeda) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Reeda 85%")
+
+p90 <- tm_shape(Reeda, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Reeda) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Reeda 90%")
+
+p95 <- tm_shape(Reeda, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Reeda) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Reeda 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Stine 
+Stine <- subset(MMYS, BatID == "Stine") 
+Stine@data$BatID <- droplevels(Stine@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Stine)
+
+kde.outputStine <- kernelUD(Stine, h="href", grid = 1000)
+
+plot(kde.outputStine)
+
+kdeStine <- raster(kde.outputStine)
+
+# sets projection to British National Grid
+projection(kdeStine) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeStine <- mask(kdeStine, Stine)
+
+## Different home range estimations 
+range75Stine <- getverticeshr(kde.outputStine, percent = 75)
+range85Stine <- getverticeshr(kde.outputStine, percent = 85)
+range90Stine <- getverticeshr(kde.outputStine, percent = 90)
+range95Stine <- getverticeshr(kde.outputStine, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Stine, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Stine) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Stine 75%")
+
+p85 <- tm_shape(Stine, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Stine) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Stine 85%")
+
+p90 <- tm_shape(Stine, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Stine) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Stine 90%")
+
+p95 <- tm_shape(Stine, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Stine) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Stine 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
+
+#########################################################
+
+## Turid 
+Turid <- subset(MMYS, BatID == "Turid") 
+Turid@data$BatID <- droplevels(Turid@data$BatID) # Remove the empty levels of other MMYS bats
+
+str(MMYS)
+str(Turid)
+
+kde.outputTurid <- kernelUD(Turid, h="href", grid = 1000)
+
+plot(kde.outputTurid)
+
+kdeTurid <- raster(kde.outputTurid)
+
+# sets projection to British National Grid
+projection(kdeTurid) <-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+
+masked_kdeTurid <- mask(kdeTurid, Turid)
+
+## Different home range estimations 
+range75Turid <- getverticeshr(kde.outputTurid, percent = 75)
+range85Turid <- getverticeshr(kde.outputTurid, percent = 85)
+range90Turid <- getverticeshr(kde.outputTurid, percent = 90)
+range95Turid <- getverticeshr(kde.outputTurid, percent = 95)
+
+
+# image plots of 95, 85 and 75 kernels
+
+p75 <- tm_shape(Turid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range75Turid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Turid 75%")
+
+p85 <- tm_shape(Turid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range85Turid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Turid 85%")
+
+p90 <- tm_shape(Turid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range90Turid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Turid 90%")
+
+p95 <- tm_shape(Turid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "salmon") +
+tm_shape(range95Turid) + 
+  tm_borders(alpha=.7, col = "salmon", lwd = 2) + 
+  tm_fill(alpha=.1, col = "salmon") +
+  tmap_options(check.and.fix = TRUE) + 
+  tm_layout(title = "Turid 95%")
+
+# p75
+# p85
+# p90
+# p95
+
+tmap_arrange(p75, p85, p90, p95, ncol = 2, nrow = 2)
 
 
 ```
 
+
+
+## Assign random poins based on the 95% kernel densities 
+
+```{r}
+Bats$BatID <- as.factor(Bats$BatID)
+
+checkpoitns <- as.data.frame(summary(Bats$BatID))
+# List of the number of points for each bat used to calculate the kernels 
+
+## Brandts
+random.points.Astrid <- spsample(range95Astrid, 81*10, "random")
+mapview(random.points.Astrid)
+
+random.points.Dagny <- spsample(range95Dagny, 83*10, "random")
+mapview(random.points.Dagny)
+
+random.points.Kaja <- spsample(range95Kaja, 91*10, "random")
+mapview(random.points.Kaja)
+
+random.points.Maren <- spsample(range95Maren, 141*10, "random")
+mapview(random.points.Maren)
+
+random.points.Nora <- spsample(range95Nora, 49*10, "random")
+mapview(random.points.Nora)
+
+random.points.Phoebe <- spsample(range95Phoebe, 62*10, "random")
+mapview(random.points.Phoebe)
+
+random.points.Sofia <- spsample(range95Sofia, 39*10, "random")
+mapview(random.points.Sofia)
+
+random.points.Steffi <- spsample(range95Steffi, 39*10, "random")
+mapview(random.points.Steffi)
+
+random.points.Thea <- spsample(range95Thea, 101*10, "random")
+mapview(random.points.Thea)
+
+random.points.Turid <- spsample(range95Turid, 8*10, "random")
+mapview(random.points.Turid)
+
+## Mystacinus 
+random.points.Amelia <- spsample(range95Amelia, 16*10, "random")
+mapview(random.points.Amelia)
+
+random.points.Aricia <- spsample(range95Aricia, 90*10, "random")
+mapview(random.points.Aricia)
+
+random.points.Daisy <- spsample(range95Daisy, 134*10, "random")
+mapview(random.points.Daisy)
+
+random.points.Ethel <- spsample(range95Ethel, 117*10, "random")
+mapview(random.points.Ethel)
+
+random.points.Ida <- spsample(range95Ida, 119*10, "random")
+mapview(random.points.Ida)
+
+random.points.Line <- spsample(range95Line, 55*10, "random")
+mapview(random.points.Line)
+
+random.points.Louise <- spsample(range95Louise, 64*10, "random")
+mapview(random.points.Louise)
+
+random.points.Marie <- spsample(range95Marie, 31*10, "random")
+mapview(random.points.Marie)
+
+random.points.Ragnhild <- spsample(range95Ragnhild, 28*10, "random")
+mapview(random.points.Ragnhild)
+
+random.points.Reeda <- spsample(range95Reeda, 70*10, "random")
+mapview(random.points.Reeda)
+
+random.points.Stine <- spsample(range95Stine, 84*10, "random")
+mapview(random.points.Stine)
+
+### Create available datasets
+
+### M.brandtii 
+avail.Astrid.df <- data.frame(
+  used = rep(0, length(random.points.Astrid)),
+  Species = rep("M.brandtii", length(Astrid)),
+  BatID = rep("Astrid", length(Astrid)), 
+  coords = random.points.Astrid@coords) 
+
+avail.Dagny.df <- data.frame(
+  used = rep(0, length(random.points.Dagny)),
+  Species = rep("M.brandtii", length(Dagny)),
+  BatID = rep("Dagny", length(Dagny)), 
+  coords = random.points.Dagny@coords)
+
+avail.Kaja.df <- data.frame(
+  used = rep(0, length(random.points.Kaja)),
+  Species = rep("M.brandtii", length(Kaja)),
+  BatID = rep("Kaja", length(Kaja)), 
+  coords = random.points.Kaja@coords)
+
+avail.Maren.df <- data.frame(
+  used = rep(0, length(random.points.Maren)),
+  Species = rep("M.brandtii", length(Maren)),
+  BatID = rep("Maren", length(Maren)), 
+  coords = random.points.Maren@coords)
+
+avail.Nora.df <- data.frame(
+  used = rep(0, length(random.points.Nora)),
+  Species = rep("M.brandtii", length(Nora)),
+  BatID = rep("Nora", length(Nora)), 
+  coords = random.points.Nora@coords)
+
+avail.Phoebe.df <- data.frame(
+  used = rep(0, length(random.points.Phoebe)),
+  Species = rep("M.brandtii", length(Phoebe)),
+  BatID = rep("Phoebe", length(Phoebe)), 
+  coords = random.points.Phoebe@coords)
+
+avail.Sofia.df <- data.frame(
+  used = rep(0, length(random.points.Sofia)),
+  Species = rep("M.brandtii", length(Sofia)),
+  BatID = rep("Sofia", length(Sofia)), 
+  coords = random.points.Sofia@coords)
+
+avail.Steffi.df <- data.frame(
+  used = rep(0, length(random.points.Steffi)),
+  Species = rep("M.brandtii", length(Steffi)),
+  BatID = rep("Steffi", length(Steffi)), 
+  coords = random.points.Steffi@coords)
+
+avail.Thea.df <- data.frame(
+  used = rep(0, length(random.points.Thea)),
+  Species = rep("M.brandtii", length(Thea)),
+  BatID = rep("Thea", length(Thea)), 
+  coords = random.points.Thea@coords)
+
+avail.Turid.df <- data.frame(
+  used = rep(0, length(random.points.Turid)),
+  Species = rep("M.brandtii", length(Turid)),
+  BatID = rep("Turid", length(Turid)), 
+  coords = random.points.Turid@coords)
+
+### MMYS
+
+avail.Amelia.df <- data.frame(
+  used = rep(0, length(random.points.Amelia)),
+  Species = rep("M.mystacinus", length(Amelia)),
+  BatID = rep("Amelia", length(Amelia)), 
+  coords = random.points.Amelia@coords)
+
+avail.Aricia.df <- data.frame(
+  used = rep(0, length(random.points.Aricia)),
+  Species = rep("M.mystacinus", length(Aricia)),
+  BatID = rep("Aricia", length(Aricia)), 
+  coords = random.points.Aricia@coords)
+
+avail.Daisy.df <- data.frame(
+  used = rep(0, length(random.points.Daisy)),
+  Species = rep("M.mystacinus", length(Daisy)),
+  BatID = rep("Daisy", length(Daisy)), 
+  coords = random.points.Daisy@coords)
+
+avail.Ethel.df <- data.frame(
+  used = rep(0, length(random.points.Ethel)),
+  Species = rep("M.mystacinus", length(Ethel)),
+  BatID = rep("Ethel", length(Ethel)), 
+  coords = random.points.Ethel@coords)
+
+avail.Ida.df <- data.frame(
+  used = rep(0, length(random.points.Ida)),
+  Species = rep("M.mystacinus", length(Ida)),
+  BatID = rep("Ida", length(Ida)), 
+  coords = random.points.Ida@coords)
+
+avail.Line.df <- data.frame(
+  used = rep(0, length(random.points.Line)),
+  Species = rep("M.mystacinus", length(Line)),
+  BatID = rep("Line", length(Line)), 
+  coords = random.points.Line@coords)
+
+avail.Louise.df <- data.frame(
+  used = rep(0, length(random.points.Louise)),
+  Species = rep("M.mystacinus", length(Louise)),
+  BatID = rep("Louise", length(Louise)), 
+  coords = random.points.Louise@coords)
+
+avail.Marie.df <- data.frame(
+  used = rep(0, length(random.points.Marie)),
+  Species = rep("M.mystacinus", length(Marie)),
+  BatID = rep("Marie", length(Marie)), 
+  coords = random.points.Marie@coords)
+
+avail.Ragnhild.df <- data.frame(
+  used = rep(0, length(random.points.Ragnhild)),
+  Species = rep("M.mystacinus", length(Ragnhild)),
+  BatID = rep("Ragnhild", length(Ragnhild)), 
+  coords = random.points.Ragnhild@coords)
+
+avail.Reeda.df <- data.frame(
+  used = rep(0, length(random.points.Reeda)),
+  Species = rep("M.mystacinus", length(Reeda)),
+  BatID = rep("Reeda", length(Reeda)), 
+  coords = random.points.Reeda@coords)
+
+avail.Stine.df <- data.frame(
+  used = rep(0, length(random.points.Stine)),
+  Species = rep("M.mystacinus", length(Stine)),
+  BatID = rep("Stine", length(Stine)), 
+  coords = random.points.Stine@coords)
+
+###
+#Combine used data for all bats
+Bats.used <- rbind(
+  Astrid, # brandts 
+  Dagny,
+  Kaja,
+  Maren,
+  Nora,
+  Phoebe,
+  Sofia,
+  Steffi,
+  Thea,
+  Turid,
+  Amelia, 
+  Aricia,  
+  Daisy, 
+  Ethel, 
+  Ida, 
+  Line, 
+  Louise, 
+  Marie, 
+  Ragnhild, 
+  Reeda, 
+  Stine)
+head(Bats.used)
+summary(Bats.used)
+dim(Bats.used)
+table(Bats.used$BatID)
+
+  # Astrid    Dagny     Kaja    Maren     Nora   Phoebe    Sofia   Steffi     Thea    Turid   Amelia 
+  #     81       83       91      141       49       62       39       39      101        8       16 
+  # Aricia    Daisy    Ethel      Ida     Line   Louise    Marie Ragnhild    Reeda    Stine 
+  #     90      134      117      119       55       64       31       28       70       84 
+
+#Combine available data for all Mbra individuals
+Bats.avail <- rbind(
+  avail.Astrid.df, # brandts 
+  avail.Dagny.df,
+  avail.Kaja.df,
+  avail.Maren.df,
+  avail.Nora.df,
+  avail.Phoebe.df,
+  avail.Sofia.df,
+  avail.Steffi.df,
+  avail.Thea.df,
+  avail.Turid.df, 
+  avail.Amelia.df, # mystacinus 
+  avail.Aricia.df,  
+  avail.Daisy.df, 
+  avail.Ethel.df, 
+  avail.Ida.df, 
+  avail.Line.df, 
+  avail.Louise.df, 
+  avail.Marie.df, 
+  avail.Ragnhild.df, 
+  avail.Reeda.df, 
+  avail.Stine.df)
+
+head(Bats.avail)
+#   used    Species BatID coords.x coords.y
+# 1    0 M.brandtii  Thea 604263.7  6658850
+# 2    0 M.brandtii  Thea 607650.4  6659768
+# 3    0 M.brandtii  Thea 604509.3  6658959
+# 4    0 M.brandtii  Thea 608160.9  6659012
+# 5    0 M.brandtii  Thea 604377.8  6660165
+# 6    0 M.brandtii  Thea 604798.2  6658901
+
+Bats.avail.df <- Bats.avail %>% 
+  rename(Easting = coords.x, Northing = coords.y) 
+head(Bats.avail.df)
+#   used    Species BatID  Easting Northing
+# 1    0 M.brandtii  Thea 604263.7  6658850
+# 2    0 M.brandtii  Thea 607650.4  6659768
+# 3    0 M.brandtii  Thea 604509.3  6658959
+# 4    0 M.brandtii  Thea 608160.9  6659012
+# 5    0 M.brandtii  Thea 604377.8  6660165
+# 6    0 M.brandtii  Thea 604798.2  6658901
+names(Bats.avail.df)
+#"used"     "Species"  "BatID"    "Easting"  "Northing"
+dim(Bats.avail.df)
+#15020 5
+
+Bats.used.df <- Bats.used@data
+Bats.used.df$used <- 1
+Bats.used.df$BatID <- as.character(Bats.used.df$BatID)
+head(Bats.used.df)
+names(Bats.used.df)
+#"BatID"    "Easting"  "Northing" "used"  
+dim(Bats.used.df)
+# 1502        4
+
+# 1502     + 15020 = 16522
+
+#Combine Used and Avilable data for all Mbra individuals
+rsf.data <- full_join(Bats.used.df, Bats.avail.df)
+dim(rsf.data)
+#16522     5 # good! 
+
+rsf.data$BatID <- as.factor(rsf.data$BatID)
+summary(rsf.data$BatID)
+  # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise    Maren 
+  #    176      990      891      913     1474     1287     1309     1001      605      704     1551 
+  #  Marie     Nora   Phoebe Ragnhild    Reeda    Sofia   Steffi    Stine     Thea    Turid 
+  #    341      539      682      308      770      429      429      924     1111       88 
+
+## Some NAs introduced in the species column that should be fixed.
+batmap <- Bats.avail %>% select(BatID, Species) %>% distinct()
+rsf.data1 <- rsf.data %>% select(-Species)
+rsf.data2 <- left_join(rsf.data1, batmap)
+rsf.data2$UTM <- "UTM32"
+
+## export as a simple dataframe
+#write.csv(rsf.data2, file = file.path(output_today, "used_available_pts_combined95KE.csv")) 
+
+
+## Make into a spatial object that can also be exported 
+coords <- coordinates(rsf.data2)<-rsf.data2[,c("Easting","Northing")]
+#assigning coordinates 
+
+proj4string(rsf.data2)<-"+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#Define the projection 
+crs(rsf.data2)
+
+rsf.data2<-rsf.data2[!is.na(rsf.data2$Easting) | !is.na(rsf.data2$Northing),]
+#Remove NA values  - There were none to remove 
+
+## Visualize to check if this worked 
+srsf.data2 <- st_as_sf(rsf.data2, crs = "+proj=utm + zone=32 + datum=WGS84 + units=m + no_defs")
+mapview(srsf.data2) # This works! 
+output_today
+
+## Exort as a geopackage
+#st_write(srsf.data2, "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/bats_rsf_pts.gpkg", driver = "GPKG")
+
+```
 
