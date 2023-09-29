@@ -1117,7 +1117,10 @@ masked_kdeThea <- mask(kdeThea, Thea)
 # range85Thea <- getverticeshr(kde.outputThea, percent = 85)
 # range90Thea <- getverticeshr(kde.outputThea, percent = 90)
 range95Thea <- getverticeshr(kde.outputThea, percent = 95)
+#area(range95Thea)/1000000 # this gives km2 
 
+# check <- st_as_sf(range95Thea)
+# st_area(check) ## the area is in m2 
 
 # image plots of 95, 85 and 75 kernels
 # 
@@ -2038,7 +2041,9 @@ masked_kdeTurid <- mask(kdeTurid, Turid)
 # range85Turid <- getverticeshr(kde.outputTurid, percent = 85)
 # range90Turid <- getverticeshr(kde.outputTurid, percent = 90)
 range95Turid <- getverticeshr(kde.outputTurid, percent = 95)
+library(geosphere)
 
+areaPolygon(range95Turid)
 
 # image plots of 95, 85 and 75 kernels
 
@@ -2524,6 +2529,427 @@ rsf.availM <- rsf.data %>% filter(Species == "M.mystacinus") %>% droplevels()
 knitr::kable(table(rsf.availB $BatID)) %>% kable_minimal() # Number of avail obs 
 knitr::kable(table(rsf.availM$BatID)) %>% kable_minimal() # Number of avail obs 
 
+## Calculate the area of the home range 
+## MBRA
+area <- area(range95Astrid)
+BatID <- "Astrid"
+Astrid_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Dagny)
+BatID <- "Dagny"
+Dagny_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Kaja)
+BatID <- "Kaja"
+Kaja_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Maren)
+BatID <- "Maren"
+Maren_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Nora)
+BatID <- "Nora"
+Nora_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Phoebe)
+BatID <- "Phoebe"
+Phoebe_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Sofia)
+BatID <- "Sofia"
+Sofia_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Steffi)
+BatID <- "Steffi"
+Steffi_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Thea)
+BatID <- "Thea"
+Thea_area <- as.data.frame(cbind(area, BatID ))
+
+# MMYS
+area <- area(range95Amelia)
+BatID <- "Amelia"
+Amelia_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Aricia)
+BatID <- "Aricia"
+Aricia_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Daisy)
+BatID <- "Daisy"
+Daisy_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Ethel)
+BatID <- "Ethel"
+Ethel_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Ida)
+BatID <- "Ida"
+Ida_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Line)
+BatID <- "Line"
+Line_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Louise)
+BatID <- "Louise"
+Louise_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Marie)
+BatID <- "Marie"
+Marie_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Ragnhild)
+BatID <- "Ragnhild"
+Ragnhild_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Reeda)
+BatID <- "Reeda"
+Reeda_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Stine)
+BatID <- "Stine"
+Stine_area <- as.data.frame(cbind(area, BatID ))
+
+area <- area(range95Turid)
+BatID <- "Turid"
+Turid_area <- as.data.frame(cbind(area, BatID ))
+
+listarea <- list(Astrid_area, Dagny_area, Kaja_area, # M. brandtii 
+                 Maren_area, Nora_area, Phoebe_area, 
+                 Sofia_area, Steffi_area, Thea_area, 
+                 Amelia_area, Aricia_area, Daisy_area, # M. mystacinus
+                 Ethel_area, Ida_area, Line_area, 
+                 Louise_area, Marie_area, Ragnhild_area, 
+                 Reeda_area, Stine_area, Turid_area) #list of 21, good
+
+## The area column is in m2 - create another that is in km2 
+allarea <- listarea %>% reduce(full_join, by=c('BatID', 'area')) 
+allarea$area <- as.numeric(allarea$area)
+allarea$area_km <- round(allarea$area /1000000 ,2)
+
+allarea <- allarea %>% 
+  mutate(Species = case_when(
+    BatID %in% c("Amelia","Marie", "Turid", 
+                 "Reeda", "Daisy", "Line", 
+                 "Stine", "Ethel", "Ragnhild", 
+                 "Ida", "Louise", "Aricia") ~ "M. mystacinus", 
+    TRUE ~ "M. brandtii")) %>% 
+  mutate(Species = factor(Species)) %>% select(-area)
+
+allareaB <- allarea %>% filter(Species == "M. brandtii") %>% select(-Species) %>% droplevels()
+allareaM <- allarea %>% filter(Species == "M. mystacinus") %>% select(-Species) %>% droplevels()
+
+knitr::kable(allareaB) %>% kable_minimal() # Number of avail obs 
+knitr::kable(allareaM) %>% kable_minimal() # Number of avail obs 
+
+## MBRA
+# mean points for brandts bats
+mean(c(81,
+83,
+91,
+141,
+49,
+62,
+39,
+39,
+101))
+
+# mean total points for brandts bats 
+mean(c(891,
+913,
+1001,
+1551,
+539,
+682,
+429,
+429,
+1111))
+
+#mean home range in km2
+mean(c(7.59,
+1.94,
+0.11,
+1.60,
+5.23,
+12.74,
+4.05,
+1.90,
+0.83))
+
+## MMYS
+# mean points for mystacinus bats
+mean(c(16,
+90,
+134,
+117,
+119,
+55,
+64,
+31,
+28,
+70,
+84,
+8))
+
+# mean total points for mystacincus bats 
+mean(c(176,
+990,
+1474,
+1287,
+1309,
+605,
+704,
+341,
+308,
+770,
+924,
+88))
+
+#mean home range in km2
+mean(c(0.46,
+1.05,
+0.39,
+1.52,
+0.57,
+0.30,
+0.61,
+1.24,
+0.40,
+0.08,
+1.87,
+0.12))
+
+## Plot the home ranges for each bat individual but with species as different panels
+batcolors <- c("#32a5ff", "#011f4b")
+#                MBRA      MMYS
+#Brandts
+BrandtsHR<-
+  tm_shape(Amelia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Amelia) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+  
+  tm_shape(Dagny, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Dagny) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  tm_shape(Kaja, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Kaja) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  tm_shape(Maren, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Maren) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+  
+  tm_shape(Nora, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Nora) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+  
+  tm_shape(Phoebe, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Phoebe) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  tm_shape(Sofia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Sofia) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+  
+  tm_shape(Steffi, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Steffi) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Thea, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#32a5ff") +
+tm_shape(range95Thea) + 
+  tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#32a5ff") +
+  tmap_options(check.and.fix = TRUE)  +
+  tm_scale_bar(position = c("top", "right"), width = 200, text.size = 15) 
+
+
+BrandtsHR
+
+#Shoudl try and address this: 
+# Warning messages:
+# 1: The shape range95Amelia is invalid (after reprojection). See sf::st_is_valid 
+# 2: The shape range95Dagny is invalid (after reprojection). See sf::st_is_valid 
+# 3: The shape range95Kaja is invalid (after reprojection). See sf::st_is_valid 
+# 4: The shape range95Maren is invalid (after reprojection). See sf::st_is_valid 
+# 5: The shape range95Phoebe is invalid (after reprojection). See sf::st_is_valid 
+# 6: The shape range95Sofia is invalid (after reprojection). See sf::st_is_valid
+
+MystacinusHR <- 
+  tm_shape(Amelia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Amelia) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Aricia, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Aricia) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Daisy, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Daisy) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  tm_shape(Ethel, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Ethel) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Ida, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Ida) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Line, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Line) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Line, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Line) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Marie, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Marie) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Ragnhild, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Ragnhild) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Reeda, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Reeda) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Stine, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Stine) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE) + 
+
+  
+  tm_shape(Turid, bbox = bound_box) + 
+  tmap_mode('view') +
+  tm_basemap("Esri.WorldTopoMap") +
+  tm_dots(col = "#011f4b") +
+tm_shape(range95Turid) + 
+  tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
+  tm_fill(alpha=.1, col = "#011f4b") +
+  tmap_options(check.and.fix = TRUE)  +
+  tm_scale_bar(position = c("top", "right"), width = 200, text.size = 15) 
+
+MystacinusHR 
+# 1: The shape range95Amelia is invalid (after reprojection). See sf::st_is_valid 
+# 2: The shape range95Ethel is invalid (after reprojection). See sf::st_is_valid 
+# 3: The shape range95Marie is invalid (after reprojection). See sf::st_is_valid 
+# 4: The shape range95Reeda is invalid (after reprojection). See sf::st_is_valid 
+# 5: The shape range95Stine is invalid (after reprojection). See sf::st_is_valid 
+# 6: The shape range95Turid is invalid (after reprojection). See sf::st_is_valid 
+
+tmap_arrange(BrandtsHR, MystacinusHR, ncol = 2, nrow = 1)
 
 ```
 
