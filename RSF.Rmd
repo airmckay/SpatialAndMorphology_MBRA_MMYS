@@ -13,70 +13,19 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 
 ### Prepare the work space
-library(SpatialKDE)
-library(tmap)
-library(tmaptools)
 library(tidyverse)
-library(sp)
-library(sf)
-library(rgeos)
-library(adehabitatMA)
-library(digest)
-library(mime)
-library(jsonlite)
-library(crs)
 library(dplyr)
-library(adehabitatHR)
-library(Rcpp)
-library(raster)
-library(rgdal)
-library(munsell)
-library(tibble)
-library(pillar)
-library(ggplot2)
-library(ResourceSelection)
-library(mapview)
-library(amt)
-library(sjPlot)
-library(Rgb)
-library(nloptr)
-library(colorspace)
-library(rlang)
-library(lattice)
-library(MASS)
-library(dismo)
 library(scales)
-library(rJava)
 library(beepr)
-library(OpenStreetMap)
 library(lubridate)
-library(rgdal)
-library(munsell)
-library(pillar)
 library(ResourceSelection)
-library(mapview)
-library(amt)
-library(sjPlot)
-library(Rgb)
-library(nloptr)
-library(colorspace)
-library(rlang)
-library(broom) 
-library(MASS)
-library(ggmap)
-library(gridExtra)
-library(raster)
-library(leaflet)
-library(terra)
-library(KernSmooth)
 library(RColorBrewer)
 library(cowplot)
 library(colorBlindness)
 library(kableExtra)
-library(boot)
-library(gclus)
 library(lme4)
-
+library(stats)
+library(DHARMa)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -145,42 +94,9 @@ names(vars)
 ```
 
 # Housekeeping of LiDAR data 
-```{r}
-
-#Check correlations between pairs of lidar variables
-# lidar.data <- vars[, 7:length(vars)]
-# lidar.data <- as.data.frame(lidar.data) # convert from sf to standard df
-# str(lidar.data) # need to remove "geom"
-# lidar.data <- lidar.data %>% select(-geom)
-
-# Make all columns numeric 
-# lidar.data$gap3.n <- as.numeric(lidar.data$gap3.n)
-# lidar.data$gap5.n <- as.numeric(lidar.data$gap5.n)
-# lidar.data$ttops.n <- as.numeric(lidar.data$ttops.n)
-
-# round(cor(lidar.data), 2)
-# abs(cor(lidar.data))
-# cor(lidar.data)
-# # Error in cor(lidar.data) : 'x' must be numeric
-# windows()
-# pairs(lidar.data)
-# Warning messages:
-# 1: In doTryCatch(return(expr), name, parentenv, handler) :
-#   display list redraw incomplete
-# 2: In doTryCatch(return(expr), name, parentenv, handler) :
-#   display list redraw incomplete
-# 3: In doTryCatch(return(expr), name, parentenv, handler) :
-#   display list redraw incomplete
-# 4: In doTryCatch(return(expr), name, parentenv, handler) :
-#   display list redraw incomplete
-```
-
-
 
 ```{r}
-## !! ## Katrine - do we still want to standardize lidar data to mean of zero? 
 
-## yes 
 vars$Species=as.factor(vars$Species)
 vars$BatID=as.factor(vars$BatID)
 
@@ -188,38 +104,6 @@ vars$gap3.n <- as.numeric(vars$gap3.n)
 vars$gap5.n <- as.numeric(vars$gap5.n)
 vars$ttops.n <- as.numeric(vars$ttops.n)
 
-
-# vars1 <- as.data.frame(vars) # cannot scale a spatial object 
-# vars1[,7:46]=scale(vars1[,7:46],scale=TRUE)
-# 
-# 
-# summary(vars1)
-# str(vars1)
-# names(vars)
-# 
-# vars2 <- drop_na(vars1)
-# 
-# # Have to drop NAs THEN scale variables to get an output. 
-# 
-# # 8473/16522
-# # This is only half the observations 
-# 
-# vars3 <- drop_na(as.data.frame(vars)) 
-# vars3[,7:46]=scale(vars3[,7:46],scale=TRUE)
-# summary(vars3$used)
-# vars3$f.used <- as.factor(vars3$used)
-# summary(vars3$f.used)
-# #    0    1 
-# # 7558  915 
-# 
-# summary(vars3$BatID)
-#   # Amelia   Aricia   Astrid    Dagny    Daisy    Ethel      Ida     Kaja     Line   Louise 
-#   #     69      602      485      258     1069      658     1025        1      294      303 
-#   #  Maren    Marie     Nora   Phoebe Ragnhild    Reeda    Sofia   Steffi    Stine     Thea 
-#   #    686      192      296      394      140      713      273      147      347      458 
-#   #  Turid 
-#   #     63
-# 
 # ## Choose variables with *no* NAs instead. 
 
 var1 <- vars %>% select(BatID, Easting, Northing, used, Species, Hmax, 
@@ -238,241 +122,373 @@ var1$hmax <- as.numeric(var1$hmax)
 
 var1 <- var1 %>% select(-Hmax)
 
-summary(var1$Hmax)
+summary(var1$hmax)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #  0.00   17.81   23.77   21.41   27.50   99.77 
 
 ## Scale numeric variables to mean = 0 
 var1 <- as.data.frame(var1)
-# var1[,6:20]=scale(var1[,6:20],scale=TRUE) # returns NaN for Hmax
+
+var1[,6:20]=scale(var1[,6:20],scale=TRUE) #
 # Try scale(rep(1, 10))
+
 
 
 # Make one large complex model with all variables
 
 # If the NAs cause too many issues, discard all NAs and try again.
 
+################################################################################
+
 fit1 = glmer(used ~ Species + hmax + hmax*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0) # that works! 
 
-fit2 = glmer(used ~ Species + Hmean + Hmean*Species + (1|BatID), data=vars3,
+fit2 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit3 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit4 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit5 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit6 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 
-fit3 = glmer(used ~ Species + Hmean + Hmean*Species + (1|BatID), data=vars3,
+fit7 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+#boundary (singular) fit: see help('isSingular')
+
+fit8 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit9 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit10 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit11 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit12 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit13 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit14 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit15 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit16 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit17 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular') 
+
+
+################################################################################
+
+summary(fit1) 
+summary(fit2) 
+summary(fit3) 
+summary(fit4) 
+summary(fit5) 
+summary(fit6)
+summary(fit7)
+summary(fit8)
+summary(fit9)
+summary(fit10) 
+summary(fit11)
+summary(fit12) 
+summary(fit13)
+summary(fit14)
+summary(fit15)
+summary(fit16)
+summary(fit17) 
+
+#                                         Fixed effects:
+#                             Estimate Std. Error z value Pr(>|z|)  
+#     hmax                    0.061922   0.005498  11.262   <2e-16 ***
+#     D0                      0.01965    0.03954   0.497  0.61915 
+#     D1                      0.01944    0.03975   0.489  0.62474 
+#     D2                      0.02199    0.03999   0.550  0.58247 
+#     D3                      0.02391    0.04039   0.592  0.55381 
+#     D4                      0.03034    0.04075   0.744  0.45659 
+#     D5                      0.03905    0.04118   0.948  0.34289 
+#     D6                      0.04354    0.04195   1.038  0.29923  #incelude
+#     D7                      0.04469    0.04296   1.040  0.29816  #include 
+#     D8                      0.03264    0.04338   0.752  0.45184
+#     D9                     -0.001586   0.042216  -0.038  0.97003 
+# gap3.mean.area             -0.26190    0.04041  -6.481 9.09e-11 ***
+# gap3.sum.area              -0.16610    0.03966  -4.188 2.81e-05 ***
+# gap5.n                      0.01432    0.03931   0.364 0.715738   
+# gap5.mean.area             -0.276859   0.040154  -6.895 5.39e-12 ***
+# gap5.sum.area              -0.16025    0.03956  -4.051 5.09e-05 ***
+# ttops.n                     0.0016286  0.0008238   1.977   0.0481 *  
+
+# Try including:
+# hmax, D7, D8, gap3.mean.area, gap3.sum.area, gap5.mean.area, gap5.sum.area, ttops.n  
+
+              
+fit = glmer(used ~ Species + hmax + D7 + D8 + 
+              gap3.mean.area + gap3.sum.area +
+              gap5.mean.area + gap5.sum.area + ttops.n +
+              hmax*Species +
+              D7*Species +
+              D8*Species + 
+              gap3.mean.area*Species +
+              gap3.sum.area*Species +
+              gap5.n*Species +
+              gap5.mean.area*Species +
+              gap5.sum.area*Species +
+              ttops.n*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 
-fit4 = glmer(used ~ Species + Hmean + Hmean*Species + (1|BatID), data=vars3,
+summary(fit)
+# Correlation matrix not shown by default, as p = 20 > 12.
+# Use print(x, correlation=TRUE)  or
+#     vcov(x)        if you need it
+
+# Fixed effects:
+#                                     Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -3.031109   0.203818 -14.872  < 2e-16 ***
+# SpeciesM.mystacinus                -0.857410   0.326958  -2.622  0.00873 ** 
+# hmax                                0.062171   0.006577   9.452  < 2e-16 ***
+# D7                                  0.475638   0.519333   0.916  0.35974    
+# D8                                 -0.985025   0.487519  -2.020  0.04333 *  
+# gap3.mean.area                      0.073531   0.142566   0.516  0.60602    
+# gap3.sum.area                      -0.806492   0.468243  -1.722  0.08500 .  
+# gap5.mean.area                     -0.374586   0.137849  -2.717  0.00658 ** 
+# gap5.sum.area                      -0.116578   0.478079  -0.244  0.80735    
+# ttops.n                            -0.014025   0.003039  -4.615 3.93e-06 ***
+# gap5.n                             -0.289579   0.101587  -2.851  0.00436 ** 
+# SpeciesM.mystacinus:hmax            0.025590   0.010505   2.436  0.01486 *  
+# SpeciesM.mystacinus:D7              1.697006   0.745901   2.275  0.02290 *  
+# SpeciesM.mystacinus:D8             -0.925983   0.683899  -1.354  0.17574    
+# SpeciesM.mystacinus:gap3.mean.area  0.189162   0.207218   0.913  0.36131    
+# SpeciesM.mystacinus:gap3.sum.area   1.157127   0.667590   1.733  0.08304 .  
+# SpeciesM.mystacinus:gap5.n          0.361017   0.132003   2.735  0.00624 ** 
+# SpeciesM.mystacinus:gap5.mean.area  0.088962   0.198956   0.447  0.65477    
+# SpeciesM.mystacinus:gap5.sum.area  -0.134643   0.683743  -0.197  0.84389    
+# SpeciesM.mystacinus:ttops.n         0.005212   0.004365   1.194  0.23250    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+drop1(fit, test = "Chi")
+# boundary (singular) fit: see help('isSingular')
+# boundary (singular) fit: see help('isSingular')
+# boundary (singular) fit: see help('isSingular')
+# Single term deletions
+# 
+# Model:
+# used ~ Species + hmax + D7 + D8 + gap3.mean.area + gap3.sum.area + 
+#     gap5.mean.area + gap5.sum.area + ttops.n + hmax * Species + 
+#     D7 * Species + D8 * Species + gap3.mean.area * Species + 
+#     gap3.sum.area * Species + gap5.n * Species + gap5.mean.area * 
+#     Species + gap5.sum.area * Species + ttops.n * Species + (1 | 
+#     BatID)
+#                        npar    AIC    LRT  Pr(Chi)   
+# <none>                      9599.2                   
+# Species:hmax              1 9603.2 5.9726 0.014530 * 
+# Species:D7                1 9602.4 5.1938 0.022667 * 
+# Species:D8                1 9599.0 1.8165 0.177730   
+# Species:gap3.mean.area    1 9598.0 0.8306 0.362094   
+# Species:gap3.sum.area     1 9600.2 2.9522 0.085760 . 
+# Species:gap5.n            1 9604.7 7.4534 0.006332 **
+# Species:gap5.mean.area    1 9597.4 0.1993 0.655289   
+# Species:gap5.sum.area     1 9597.3 0.0377 0.846078   
+# Species:ttops.n           1 9598.6 1.4117 0.234780   
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+fit.a = glmer(used ~ Species + hmax + D7 + 
+              gap3.sum.area +
+              gap5.mean.area +
+              gap5.n +
+              hmax*Species +
+              D7*Species +
+              gap3.sum.area*Species +
+              gap5.n*Species +
+              (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 
-              Hsd + Hcv + Hkurt + Hskewness +
-              H10 + H20 + H30 + H40 + 
-              H50 + H60 + H70 + H80 + 
-              H90 + H95 + D0 + D1 + D2 + 
-              D3 + D4 + D5 + D6 + D7 + 
-              D8 + D9 + gap3.n + gap3.mean.area +
-              gap3.sd.area + gap3.sum.area + gap5.n + 
-              gap5.mean.area + gap5.sd.area + gap5.sum.area + 
-              ttops.n + crown.sd.area + crown.mean.area + 
-              ttops.mean.height + ttops.sd.height +
-              Hmax*Species + Hmean*Species + 
-              Hsd*Species + Hcv*Species + Hkurt*Species + Hskewness*Species +
-              H10*Species + H20*Species + H30*Species + H40*Species + 
-              H50*Species + H60*Species + H70*Species + H80*Species + 
-              H90*Species + H95*Species + D0*Species + D1*Species + D2*Species + 
-              D3*Species + D4*Species + D5*Species + D6*Species + D7*Species + 
-              D8*Species + D9*Species + gap3.n*Species + gap3.mean.area*Species +
-              gap3.sd.area*Species + gap3.sum.area*Species + gap5.n*Species + 
-              gap5.mean.area*Species + gap5.sd.area*Species + gap5.sum.area*Species + 
-              ttops.n*Species + crown.sd.area*Species + crown.mean.area*Species + 
-              ttops.mean.height*Species + ttops.sd.height*Species + (1|BatID), data=vars1,
-              family=binomial(link="logit"),nAGQ = 0)
-# Error: Invalid grouping factor specification, BatID
-summary(vars1$BatID)
+summary(fit.a)
+
+#      AIC      BIC   logLik deviance df.resid 
+#   9679.2   9771.7  -4827.6   9655.2    16510 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -3.9606 -0.3588 -0.3016 -0.2124  8.3606 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.002391 0.0489  
+# Number of obs: 16522, groups:  BatID, 21
+
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                       -3.746945   0.159518 -23.489  < 2e-16 ***
+# SpeciesM.mystacinus               -0.617348   0.248873  -2.481 0.013117 *  
+# hmax                               0.063102   0.006364   9.916  < 2e-16 ***
+# D7                                -0.472274   0.111940  -4.219 2.45e-05 ***
+# gap3.sum.area                     -0.490264   0.135013  -3.631 0.000282 ***
+# gap5.mean.area                    -0.113331   0.058367  -1.942 0.052175 .  
+# gap5.n                            -0.326123   0.086226  -3.782 0.000155 ***
+# SpeciesM.mystacinus:hmax           0.024180   0.009996   2.419 0.015568 *  
+# SpeciesM.mystacinus:D7             0.683922   0.130930   5.224 1.75e-07 ***
+# SpeciesM.mystacinus:gap3.sum.area  1.071932   0.163935   6.539 6.20e-11 ***
+# SpeciesM.mystacinus:gap5.n         0.550539   0.111179   4.952 7.35e-07 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) SpcsM. hmax   D7     gp3.s. gp5.m. gap5.n SpcM.: SM.:D7 SM.:3.
+# SpcsM.mystc -0.631                                                               
+# hmax        -0.960  0.604                                                        
+# D7           0.018  0.002  0.028                                                 
+# gap3.sum.ar -0.142  0.137  0.184  0.640                                          
+# gap5.mean.r -0.102 -0.034  0.114 -0.135 -0.464                                   
+# gap5.n      -0.063  0.042  0.091 -0.146  0.465 -0.009                            
+# SpcsM.myst:  0.597 -0.968 -0.621 -0.036 -0.179  0.061 -0.059                     
+# SpcsM.my:D7 -0.003 -0.060 -0.038 -0.838 -0.490 -0.009  0.126  0.094              
+# SpcsM.m:3..  0.153 -0.278 -0.192 -0.479 -0.659  0.027 -0.380  0.332  0.662       
+# SpcsM.my:5.  0.051 -0.093 -0.073  0.117 -0.351 -0.015 -0.775  0.116 -0.074  0.572
+
+```
+
+
+## Sketch model fit for model  to understand what the model is telling us 
+
+Ran into issues with using the glm() function. From what I could read online troubleshooting this error may involve uninstalling and reinstalling R which I would like to avoid... 
+```{r}
+############################################################
+
+##refitting model with GLM to sketch results
+
+fit.x <- glm(used ~ Species + hmax + D7 + 
+              gap3.sum.area +
+              gap5.mean.area +
+              gap5.n +
+              hmax*Species +
+              D7*Species +
+              gap3.sum.area*Species +
+              gap5.n*Species, family=binomial(), data=var1)
+
+summary(fit.x)
+# Coefficients:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                       -3.123896   0.177948 -17.555  < 2e-16 ***
+# SpeciesM.mystacinus               -0.471452   0.245765  -1.918 0.055072 .  
+# hmax                               0.064046   0.006310  10.150  < 2e-16 ***
+# D8                                -1.528826   0.339763  -4.500 6.81e-06 ***
+# gap3.sum.area                     -0.936956   0.149551  -6.265 3.73e-10 ***
+# gap5.mean.area                    -0.202879   0.058935  -3.442 0.000577 ***
+# ttops.n                           -0.012984   0.001790  -7.254 4.03e-13 ***
+# gap5.n                            -0.290077   0.087132  -3.329 0.000871 ***
+# D7                                 1.022709   0.358025   2.857 0.004283 ** 
+# SpeciesM.mystacinus:hmax           0.020468   0.009897   2.068 0.038627 *  
+# SpeciesM.mystacinus:D7             0.848583   0.142466   5.956 2.58e-09 ***
+# SpeciesM.mystacinus:gap3.sum.area  1.079950   0.168810   6.397 1.58e-10 ***
+# SpeciesM.mystacinus:gap5.n         0.418130   0.112878   3.704 0.000212 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# (Dispersion parameter for binomial family taken to be 1)
+# 
+#     Null deviance: 10066.4  on 16521  degrees of freedom
+# Residual deviance:  9567.8  on 16509  degrees of freedom
+# AIC: 9593.8
+# 
+# Number of Fisher Scoring iterations: 6
+
+
+##getting predicted use as a function of zmax, at average zq60 and zcv
+range.hmax <- range(var1$hmax)
+range.hmax
+#[1] 0.00 99.77
+
+plotting_dfm <- expand.grid(hmax = seq(from = 0, to = 99.7, by = 10),
+                            Species    = c("M.brandtii","M.mystacinus"),
+                            D7 = mean(var1$D7),
+                            gap3.sum.area = mean(var1$gap3.sum.area),
+                            gap3.mean.area = mean(var1$gap3.mean.area),
+                            gap5.mean.area = mean(var1$gap5.mean.area), 
+                            gap5.n = mean(var1$gap5.n))
+
+plotting_dfm$Species = as.factor(plotting_dfm$Species)
+
+plotting_dfm$preds <- plogis( predict(fit.x , newdata=plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(plotting_dfm, aes(x=hmax, y =preds, color=as.factor(Species)))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by hmax and Species") + 
+  ggplot2::ylab("Predicted Use")
+
+
+#----------------------------- gap5.n 
+
+##getting predicted use as a function of zq60, at average zmax and zcv
+range.gap5.n <- range(var1$gap5.n)
+range.gap5.n
+#[1] -0.6713285  5.7284651
+
+plotting_dfm <- expand.grid(gap5.n = seq(from = -0.67, to = 5.73, by = 0.2),
+                            Species    = c("M.brandtii","M.mystacinus"),
+                            D7 = mean(var1$D7),
+                            gap3.sum.area = mean(var1$gap3.sum.area),
+                            gap3.mean.area = mean(var1$gap3.mean.area),
+                            gap5.mean.area = mean(var1$gap5.mean.area), 
+                            hmax = mean(var1$hmax))
+
+plotting_dfm$Species = as.factor(plotting_dfm$Species)
+
+plotting_dfm$preds <- plogis( predict(fit.x , newdata=plotting_dfm))
+
+
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(plotting_dfm, aes(x=gap5.n, y =preds, color=as.factor(Species)))
+pl + 
+  geom_point( ) +
+  geom_smooth() + 
+  ggtitle("Predicted Use by gap5.n and Species") + 
+  ggplot2::ylab("Predicted Use")
+
+
+
+
+
 
 
 
 ```
 
-
-fit = glmer(used ~ Species + 
-              Hmax*Species + Hmean*Species + 
-              Hsd + Hcv + Hkurt + Hskewness +
-              H10 + H20 + H30 + H40 + 
-              H50 + H60 + H70 + H80 + 
-              H90 + H95 + D0 + D1 + D2 + 
-              D3 + D4 + D5 + D6 + D7 + 
-              D8 + D9 + gap3.n + gap3.mean.area +
-              gap3.sd.area + gap3.sum.area + gap5.n + 
-              gap5.mean.area + gap5.sd.area + gap5.sum.area + 
-              ttops.n + crown.sd.area + crown.mean.area + 
-              ttops.mean.height + ttops.sd.height +
-              Hmax*Species + Hmean*Species + 
-              Hsd*Species + Hcv*Species + Hkurt*Species + Hskewness*Species +
-              H10*Species + H20*Species + H30*Species + H40*Species + 
-              H50*Species + H60*Species + H70*Species + H80*Species + 
-              H90*Species + H95*Species + D0*Species + D1*Species + D2*Species + 
-              D3*Species + D4*Species + D5*Species + D6*Species + D7*Species + 
-              D8*Species + D9*Species + gap3.n*Species + gap3.mean.area*Species +
-              gap3.sd.area*Species + gap3.sum.area*Species + gap5.n*Species + 
-              gap5.mean.area*Species + gap5.sd.area*Species + gap5.sum.area*Species + 
-              ttops.n*Species + crown.sd.area*Species + crown.mean.area*Species + 
-              ttops.mean.height*Species + ttops.sd.height*Species + (1|BatID), data=vars1,
-              family=binomial(link="logit"),nAGQ = 0)
-
-
-<!-- #If the lidar variables are highly correlated:  -->
-<!-- #Test each of them separately, in combination with Species and the lidar variable ? Species interaction -->
-
-
-<!-- ```{r} -->
-<!-- Mmys <- subset(vars, Species == "M.mystacinus") -->
-<!-- Mbra <- subset(vars, Species == "M.brandtii") -->
-
-<!-- #----------------Exploring lidar variables influencing probability of use in M_mys -->
-
-<!-- #We will fit mixed models with BatID as random effect to account for among-individuals variation -->
-<!-- fit1 = glmer(used ~ 1|BatID, data=Mmys, family=binomial(link="logit"), -->
-<!--              nAGQ = 0)#Intercept model -->
-<!-- fit2 = glmer(used ~ zmax + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)#zmax model - not taking into account which species -->
-<!-- fit3 = glmer(used ~ zmean + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit4 = glmer(used ~ zsd + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit5 = glmer(used ~ pzabovezmean + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit6 = glmer(used ~ pzabove0.5 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit7 = glmer(used ~ zq10 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit8 = glmer(used ~ zq20 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit9 = glmer(used ~ zq30 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit10 = glmer(used ~ zq40 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit11 = glmer(used ~ zq50 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit12 = glmer(used ~ zq60 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit13 = glmer(used ~ zq70 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit14 = glmer(used ~ zq80 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit15 = glmer(used ~ zq90 + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit16 = glmer(used ~ zcv + (1|BatID), data=Mmys, -->
-<!--               family=binomial(link="logit"),nAGQ = 0) -->
-<!-- summary(fit1) -->
-<!-- summary(fit2) -->
-<!-- summary(fit3) -->
-<!-- summary(fit4) -->
-<!-- summary(fit5) -->
-<!-- summary(fit6) -->
-<!-- summary(fit7) -->
-<!-- summary(fit8) -->
-<!-- summary(fit9) -->
-<!-- summary(fit10) -->
-<!-- summary(fit11) -->
-<!-- summary(fit12) -->
-<!-- summary(fit13) -->
-<!-- summary(fit14) -->
-<!-- summary(fit15) -->
-<!-- summary(fit16) -->
-
-
-<!-- #                                         Fixed effects: -->
-<!-- #                                  Estimate  Std. Error    z value Pr(>|z|)   -->
-<!-- #summary(fit1)       (Intercept)  -0.001226    0.049523    -0.025     0.98 -->
-<!-- #summary(fit2)       zmax          0.56845     0.05678     10.012   <2e-16 ***      -->
-<!-- #summary(fit3)       zmean         0.28960     0.04925      5.881 4.08e-09 ***     -->
-<!-- #summary(fit4)       zsd           0.37371     0.05079      7.358 1.87e-13 ***        -->
-<!-- #summary(fit5)       pzabovezmean -0.104977    0.050002    -2.099     0.0358 * -->
-<!-- #summary(fit6)       pzabove0.5    0.23349     0.05022      4.649 3.33e-06 *** -->
-<!-- #summary(fit7)       zq10          1.08648    28.07220      0.039     0.969 -->
-<!-- #summary(fit8)       zq20          0.067619    0.082128     0.823     0.410       -->
-<!-- #summary(fit9)       zq30          0.062207    0.048318     1.287     0.198       -->
-<!-- #summary(fit10)      zq40          0.11303     0.04620      2.447     0.0144 *       -->
-<!-- #summary(fit11)      zq50          0.20342     0.04687      4.340 1.43e-05 ***       -->
-<!-- #summary(fit12)      zq60          0.26371     0.04744      5.559 2.71e-08 ***      -->
-<!-- #summary(fit13)      zq70          0.26479     0.04819      5.495 3.92e-08 ***       -->
-<!-- #summary(fit14)      zq80          0.27160     0.04910      5.531 3.18e-08 ***       -->
-<!-- #summary(fit15)      zq90          0.29352     0.04998      5.872 4.29e-09 ***       -->
-<!-- #summary(fit16)      zcv           0.36400     0.06341      5.740 9.46e-09 ***        -->
-
-
-
-
-<!-- #----------------Exploring lidar variables influencing probability of use in M_bra -->
-
-<!-- #We will fit mixed models with BatID as random effect to account for among-individuals variation -->
-<!-- fit1 = glmer(used ~ 1|BatID, data=Mbra, family=binomial(link="logit"), -->
-<!--              nAGQ = 0)#Intercept model -->
-<!-- fit2 = glmer(used ~ zmax + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)#zmax model - not taking into account which species -->
-<!-- fit3 = glmer(used ~ zmean + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit4 = glmer(used ~ zsd + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit5 = glmer(used ~ pzabovezmean + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit6 = glmer(used ~ pzabove0.5 + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit7 = glmer(used ~ zq10 + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit8 = glmer(used ~ zq20 + (1|BatID), data=Mbra, -->
-<!--              family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit9 = glmer(used ~ zq30 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit10 = glmer(used ~ zq40 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit11 = glmer(used ~ zq50 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit12 = glmer(used ~ zq60 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit13 = glmer(used ~ zq70 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit14 = glmer(used ~ zq80 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit15 = glmer(used ~ zq90 + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-<!-- fit16 = glmer(used ~ zcv + (1|BatID), data=Mbra, -->
-<!--               family=binomial(link="logit"),nAGQ = 0)# -->
-
-<!-- summary(fit1) -->
-<!-- summary(fit2) -->
-<!-- summary(fit3) -->
-<!-- summary(fit4) -->
-<!-- summary(fit5) -->
-<!-- summary(fit6) -->
-<!-- summary(fit7) -->
-<!-- summary(fit8) -->
-<!-- summary(fit9) -->
-<!-- summary(fit10) -->
-<!-- summary(fit11) -->
-<!-- summary(fit12) -->
-<!-- summary(fit13) -->
-<!-- summary(fit14) -->
-<!-- summary(fit15) -->
-<!-- summary(fit16) -->
-
-<!-- #                                         Fixed effects: -->
-<!-- #                                 Estimate Std. Error z value Pr(>|z|)   -->
-<!-- #summary(fit1)      (Intercept)   -0.007315   0.054094  -0.135    0.892  -->
-<!-- #summary(fit2)       zmax          0.59866    0.05753   10.406   <2e-16 ***     -->
-<!-- #summary(fit3)       zmean         0.33770    0.06338    5.328 9.91e-08 ***    -->
-<!-- #summary(fit4)       zsd           0.49433    0.06143    8.047 8.46e-16 ***       -->
-<!-- #summary(fit5)       pzabovezmean -0.42778    0.05665   -7.551 4.31e-14 *** -->
-<!-- #summary(fit6)       pzabove0.5    0.33931    0.05875    5.775 7.68e-09 *** -->
-<!-- #summary(fit7)       zq10          2.55180    1.68871    1.511    0.131       -->
-<!-- #summary(fit8)       zq20          0.139719   0.069896   1.999    0.0456 *      -->
-<!-- #summary(fit9)       zq30          0.091476   0.060772   1.505    0.132      -->
-<!-- #summary(fit10)      zq40          0.033818   0.062137   0.544    0.586      -->
-<!-- #summary(fit11)      zq50          0.081969   0.062729   1.307    0.191      -->
-<!-- #summary(fit12)      zq60          0.18005    0.06366    2.828    0.00468 **     -->
-<!-- #summary(fit13)      zq70          0.31328    0.06315    4.961 7.01e-07 ***      -->
-<!-- #summary(fit14)      zq80          0.36014    0.06187    5.821 5.85e-09 ***      -->
-<!-- #summary(fit15)      zq90          0.40007    0.06042    6.622 3.55e-11 ***      -->
-<!-- #summary(fit16)      zcv           0.28229    0.05259    5.367 7.99e-08 ***       -->
-
-
-<!-- ``` -->
 
