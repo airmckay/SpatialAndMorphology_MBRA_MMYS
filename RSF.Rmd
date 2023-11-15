@@ -72,7 +72,7 @@ names(vars)
 # [31] "D8"                "D9"                "gap3.n"            "gap3.mean.area"    "gap3.sd.area"     
 # [36] "gap3.sum.area"     "gap5.n"            "gap5.mean.area"    "gap5.sd.area"      "gap5.sum.area"    
 # [41] "ttops.n"           "crown.mean.size"   "crown.sd.size"     "ttops.mean.height" "ttops.sd.height"  
-# [46] "water.distance"    "water.objtype"     "YOD"               "DIST"              "geom"         
+# [46] "water.distance"    "water.objtype"     "YOD"               "DIST"              "geom"           
 
 ## For writing descriptions of each variable 
 
@@ -83,43 +83,66 @@ mettext <- as.data.frame(names(vars))
 # Housekeeping of LiDAR data 
 
 ```{r}
+str(vars)
+summary(vars)
 
-vars$Species=as.factor(vars$Species)
-vars$BatID=as.factor(vars$BatID)
 
-vars$gap3.n <- as.numeric(vars$gap3.n)
-vars$gap5.n <- as.numeric(vars$gap5.n)
-vars$ttops.n <- as.numeric(vars$ttops.n)
+# Hans Ole: HOW TO DEAL WITH NAs:
+dt <- vars
+summary(dt[is.na(dt$Hmean),])
+dt$H10[is.na(dt$Hmax)] <- 0.5
+dt$Hmean[is.na(dt$Hmean)] <- 0.5
+dt$H10[is.na(dt$H10)] <- 0.5
+dt$H20[is.na(dt$H20)] <- 0.5
+dt$H30[is.na(dt$H30)] <- 0.5
+dt$H40[is.na(dt$H40)] <- 0.5
+dt$H50[is.na(dt$H50)] <- 0.5
+dt$H60[is.na(dt$H60)] <- 0.5
+dt$H70[is.na(dt$H70)] <- 0.5
+dt$H80[is.na(dt$H80)] <- 0.5
+dt$H90[is.na(dt$H90)] <- 0.5
+dt$H95[is.na(dt$H95)] <- 0.5
+set.seed(123)
+un <- runif(10000)
 
-# ## Choose variables with *no* NAs instead. 
+dt$Hsd[is.na(dt$Hsd)] <- sd(un)
+dt$Hcv[is.na(dt$Hcv)] <- dt$Hsd[is.na(dt$Hcv)] / dt$Hmean[is.na(dt$Hcv)]
+dt$crown.mean.size[is.na(dt$crown.mean.size)] <- 0
+dt$ttops.mean.height[is.na(dt$ttops.mean.height)] <- 0
 
-var1 <- vars %>% select(BatID, Easting, Northing, used, Species, Hmax, 
-                        D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-                        gap3.mean.area, gap3.sum.area, 
-                        gap5.n, gap5.mean.area, gap5.sum.area, 
-                        ttops.n)
+dt$gap5.sd.area[is.na(dt$gap5.sd.area)] <- 0
+dt$gap3.sd.area[is.na(dt$gap3.sd.area)] <- 0
+dt$crown.sd.size[is.na(dt$crown.sd.size)] <- 0
+dt$ttops.sd.height[is.na(dt$ttops.sd.height)] <- 0
+summary(dt)
+
+# Hmax -Inf = 0.5
+dt$Hmax[dt$Hmax == "-Inf"] <- 0.5
+
+## NAs for Hkurt and Hskewness: 
+#  Generate a uniform distribution between 0 and 1 and compute the value of that
+
+# Hkurt NA = -1.183527 
+dt$Hkurt[is.na(dt$Hkurt)] <- -1.183527 
+
+# Hskewness NA = 0.004507174 
+dt$Hskewness[is.na(dt$Hskewness)] <- -0.004507174 
+
+
+dt$Species=as.factor(dt$Species)
+dt$BatID=as.factor(dt$BatID)
+dt$water.objtype=as.factor(dt$water.objtype)
+
+dt$YOD[is.na(dt$YOD)] <- "Undetected"
+dt$YOD=as.factor(dt$YOD)
+
 # 16522 obs of 23 vars 
 
-summary(var1)
-summary(var1$Hmax) 
+dt1 <- dt # Use this to scale all continuous numerical data besides distance to water 
 
-var1$Hmax <- as.character(var1$Hmax)
-var1 <- var1 %>% mutate(hmax = str_replace(Hmax, "-Inf", "0")) 
-var1$hmax <- as.numeric(var1$hmax)
+dt1[,7:45]=scale(dt1[,7:45], scale=TRUE) #
 
-var1 <- var1 %>% select(-Hmax)
-
-summary(var1$hmax)
-  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-  #  0.00   17.81   23.77   21.41   27.50   99.77 
-
-## Scale numeric variables to mean = 0 
-var1 <- as.data.frame(var1)
-
-var1[,6:20]=scale(var1[,6:20],scale=TRUE) #
-# Try scale(rep(1, 10))
-
-
+names(dt1)
 
 # Make one large complex model with all variables
 
@@ -127,69 +150,130 @@ var1[,6:20]=scale(var1[,6:20],scale=TRUE) #
 
 ################################################################################
 
-fit1 = glmer(used ~ Species + hmax + hmax*Species + (1|BatID), data=var1,
-              family=binomial(link="logit"),nAGQ = 0) # that works! 
+# Hmax
+fit1 = glmer(used ~ Species + Hmax + Hmax*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# Hmean
+fit2 = glmer(used ~ Species + Hmean + Hmean*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
 
-fit2 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=var1,
+# Hsd 
+fit3 = glmer(used ~ Species + Hsd + Hsd*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# Hcv
+fit4 = glmer(used ~ Species + Hcv + Hcv*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# Hkurt
+fit5 = glmer(used ~ Species + Hkurt + Hkurt*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# Hskewness
+fit6 = glmer(used ~ Species + Hskewness + Hskewness*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# H10
+fit7 = glmer(used ~ Species + H10 + H10*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# H20
+fit7 = glmer(used ~ Species + H20 + H20*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# H30
+fit8 = glmer(used ~ Species + H30 + H30*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# H40
+fit9 = glmer(used ~ Species + H40 + H40*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular') 
+
+# H50
+fit10 = glmer(used ~ Species + H50 + H50*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+
+# H60
+fit11 = glmer(used ~ Species + H60 + H60*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+
+# H70
+fit12 = glmer(used ~ Species + H70 + H70*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+
+# H80
+fit13 = glmer(used ~ Species + H80 + H80*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+
+
+fit4 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit3 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=var1,
+fit3 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit4 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=var1,
+fit4 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit5 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=var1,
+fit5 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit6 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=var1,
+fit6 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 
-fit7 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=var1,
+fit7 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 #boundary (singular) fit: see help('isSingular')
 
-fit8 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=var1,
+fit8 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit9 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=var1,
+fit9 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit10 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=var1,
+fit10 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit11 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=var1,
+fit11 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit12 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=var1,
+fit12 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit13 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=var1,
+fit13 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit14 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=var1,
+fit14 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit15 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=var1,
+fit15 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit16 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=var1,
+fit16 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit17 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=var1,
+fit17 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular') 
 
