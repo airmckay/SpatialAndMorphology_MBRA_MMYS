@@ -52,7 +52,7 @@ output_today
 ```{r}
 
 ## Covariates from LiDAR data prepared by Hans Ole 
-vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/vars_dist45.rds")
+vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/vars_dist45_v3.rds")
 
 #Used and available positions - just for referencing. 
 # rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
@@ -64,37 +64,20 @@ str(vars) # sf data frame
 
 names(vars)
 # [1] "BatID"             "Easting"           "Northing"          "used"              "Species"          
-#  [6] "UTM"      
-
-
-
-
-# "Hmax"              "Hmean"             "Hsd"               "Hcv"              
-# [11] "Hkurt"             "Hskewness"         
-
-# "H10"               "H20"               "H30"              
+#  [6] "UTM"               "Hmax"              "Hmean"             "Hsd"               "Hcv"              
+# [11] "Hkurt"             "Hskewness"         "H10"               "H20"               "H30"              
 # [16] "H40"               "H50"               "H60"               "H70"               "H80"              
-# [21] "H90"               "H95"               
-
-
-
-
-#"D0"                "D1"                "D2"               
+# [21] "H90"               "H95"               "D0"                "D1"                "D2"               
 # [26] "D3"                "D4"                "D5"                "D6"                "D7"               
-# [31] "D8"                "D9"                
-
-
-# "gap3.n"            "gap3.mean.area"    "gap3.sd.area"     
+# [31] "D8"                "D9"                "gap3.n"            "gap3.mean.area"    "gap3.sd.area"     
 # [36] "gap3.sum.area"     "gap5.n"            "gap5.mean.area"    "gap5.sd.area"      "gap5.sum.area"    
-# [41] "ttops.n"           "crown.mean.area"   "crown.sd.area"     "ttops.mean.height" "ttops.sd.height"  
-
-
-# [46] "DIST"              "geom"   
+# [41] "ttops.n"           "crown.mean.size"   "crown.sd.size"     "ttops.mean.height" "ttops.sd.height"  
+# [46] "water.distance"    "water.objtype"     "YOD"               "DIST"              "geom"         
 
 ## For writing descriptions of each variable 
 
 mettext <- as.data.frame(names(vars))
-write.csv(mettext, "~mettext.csv")
+# write.csv(mettext, "~mettext.csv") # 15.11.2023
 ```
 
 # Housekeeping of LiDAR data 
@@ -118,7 +101,7 @@ var1 <- vars %>% select(BatID, Easting, Northing, used, Species, Hmax,
 # 16522 obs of 23 vars 
 
 summary(var1)
-summary(var1$Hmax) # There are -Inf values which I will replace with 0 
+summary(var1$Hmax) 
 
 var1$Hmax <- as.character(var1$Hmax)
 var1 <- var1 %>% mutate(hmax = str_replace(Hmax, "-Inf", "0")) 
