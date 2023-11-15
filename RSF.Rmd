@@ -183,100 +183,145 @@ fit7 = glmer(used ~ Species + H10 + H10*Species + (1|BatID), data=dt1,
 # boundary (singular) fit: see help('isSingular') 
 
 # H20
-fit7 = glmer(used ~ Species + H20 + H20*Species + (1|BatID), data=dt1,
+fit8 = glmer(used ~ Species + H20 + H20*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 # boundary (singular) fit: see help('isSingular') 
 
 # H30
-fit8 = glmer(used ~ Species + H30 + H30*Species + (1|BatID), data=dt1,
+fit9 = glmer(used ~ Species + H30 + H30*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 # boundary (singular) fit: see help('isSingular') 
 
 # H40
-fit9 = glmer(used ~ Species + H40 + H40*Species + (1|BatID), data=dt1,
+fit10 = glmer(used ~ Species + H40 + H40*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 # boundary (singular) fit: see help('isSingular') 
 
 # H50
-fit10 = glmer(used ~ Species + H50 + H50*Species + (1|BatID), data=dt1,
+fit11 = glmer(used ~ Species + H50 + H50*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 
 # H60
-fit11 = glmer(used ~ Species + H60 + H60*Species + (1|BatID), data=dt1,
+fit12 = glmer(used ~ Species + H60 + H60*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 
 # H70
-fit12 = glmer(used ~ Species + H70 + H70*Species + (1|BatID), data=dt1,
+fit13 = glmer(used ~ Species + H70 + H70*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 
 # H80
-fit13 = glmer(used ~ Species + H80 + H80*Species + (1|BatID), data=dt1,
+fit14 = glmer(used ~ Species + H80 + H80*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0) 
 
+# H90
+fit15 = glmer(used ~ Species + H90 + H90*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular')
 
-fit4 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=dt1,
+# H95
+fit16 = glmer(used ~ Species + H95 + H95*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular')
+
+
+fit17 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit3 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=dt1,
+fit18 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit4 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=dt1,
+fit19 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit5 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=dt1,
+fit20 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit6 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=dt1,
+fit21 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 
-fit7 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=dt1,
+fit22 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 #boundary (singular) fit: see help('isSingular')
 
-fit8 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=dt1,
+fit23 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit9 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=dt1,
+fit24 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit10 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=dt1,
+fit25 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit11 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=dt1,
+fit26 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit12 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=dt1,
+fit27 = glmer(used ~ Species + gap3.n + gap3.n*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit13 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=dt1,
+fit28 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit14 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=dt1,
+fit29 = glmer(used ~ Species + gap3.sd.area + gap3.sd.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit15 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=dt1,
+fit30 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit16 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=dt1,
+fit31 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit17 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=dt1,
+fit32 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit33 = glmer(used ~ Species + gap5.sd.area + gap5.sd.area*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit34 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular')
+
+fit35 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=dt1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular') 
 
+fit36 = glmer(used ~ Species + crown.mean.size + crown.mean.size*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular') 
+
+fit37 = glmer(used ~ Species + crown.sd.size + crown.sd.size*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular') 
+
+fit38 = glmer(used ~ Species + ttops.mean.height + ttops.mean.height*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular') 
+
+fit39 = glmer(used ~ Species + ttops.sd.height + ttops.sd.height*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+# boundary (singular) fit: see help('isSingular') 
+
+fit40 = glmer(used ~ Species + water.distance + water.distance*Species + (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+
+names(dt)
+
+# error message "boundary (singular) fit: see help('isSingular')" interpretted as: 
+# Your model did fit, but it generated that warning because your random effects are very small. 
 
 ################################################################################
 
@@ -297,26 +342,70 @@ summary(fit14)
 summary(fit15)
 summary(fit16)
 summary(fit17) 
-
+summary(fit18)
+summary(fit19)
+summary(fit20)
+summary(fit21)
+summary(fit22)
+summary(fit23)
+summary(fit24)
+summary(fit25)
+summary(fit26)
+summary(fit27)
+summary(fit28)
+summary(fit29)
+summary(fit30)
+summary(fit31)
+summary(fit32)
+summary(fit33)
+summary(fit34)
+summary(fit35)
+summary(fit36)
+summary(fit37)
+summary(fit38)
+summary(fit39)
 #                                         Fixed effects:
 #                             Estimate Std. Error z value Pr(>|z|)  
-#     hmax                    0.061922   0.005498  11.262   <2e-16 ***
-#     D0                      0.01965    0.03954   0.497  0.61915 
-#     D1                      0.01944    0.03975   0.489  0.62474 
-#     D2                      0.02199    0.03999   0.550  0.58247 
-#     D3                      0.02391    0.04039   0.592  0.55381 
-#     D4                      0.03034    0.04075   0.744  0.45659 
-#     D5                      0.03905    0.04118   0.948  0.34289 
-#     D6                      0.04354    0.04195   1.038  0.29923  #incelude
-#     D7                      0.04469    0.04296   1.040  0.29816  #include 
-#     D8                      0.03264    0.04338   0.752  0.45184
-#     D9                     -0.001586   0.042216  -0.038  0.97003 
-# gap3.mean.area             -0.26190    0.04041  -6.481 9.09e-11 ***
-# gap3.sum.area              -0.16610    0.03966  -4.188 2.81e-05 ***
-# gap5.n                      0.01432    0.03931   0.364 0.715738   
-# gap5.mean.area             -0.276859   0.040154  -6.895 5.39e-12 ***
-# gap5.sum.area              -0.16025    0.03956  -4.051 5.09e-05 ***
-# ttops.n                     0.0016286  0.0008238   1.977   0.0481 *  
+# 1 Hmax                     0.54393    0.04829  11.263   <2e-16 ***
+# 2 Hmean                    0.46300    0.03950  11.721   <2e-16 ***
+# 3 Hsd                      0.48800    0.04226  11.547   <2e-16 ***
+# 4 Hcv                     -0.06906    0.04110  -1.680   0.0929 .
+# 5 Hkurt                   -0.203448   0.071384  -2.850  0.00437 ** 
+# 6 Hskewness               -0.22055    0.04511  -4.890 1.01e-06 ***
+# 7 H10                      0.23860    0.03590   6.647    3e-11 ***
+# 8 H20                      0.32616    0.03664   8.901   <2e-16 ***
+# 9 H30                      0.36262    0.03750   9.669   <2e-16 ***
+#10 H40                      0.4046948  0.0382771  10.573   <2e-16 ***
+#11 H50                      0.4586793  0.0391807  11.707   <2e-16 ***
+#12 H60                      0.48669    0.04032  12.069   <2e-16 ***
+#13 H70                      0.49908    0.04135  12.070   <2e-16 ***
+#14 H80                      0.50816    0.04249  11.958  < 2e-16 ***
+#15 H90                      0.51921    0.04374  11.869  < 2e-16 ***
+#16 H95                      0.55640    0.04513  12.329   <2e-16 ***
+#17 D0                       0.01242    0.03960   0.314  0.75370 
+#18 D1                       0.01567    0.03968   0.395  0.69295
+#19 D2                       0.01722    0.03992   0.431  0.66625 
+#20 D3                       0.02071    0.04026   0.514  0.60701 
+#21 D4                      0.02433    0.04068   0.598  0.54984 
+#22 D5                      0.03233    0.04113   0.786  0.43180    
+#23 D6                      0.03934    0.04183   0.940  0.3470
+#24 D7                      0.03999    0.04292   0.932  0.35147
+#25 D8                      0.02920    0.04351   0.671  0.50214 
+#26 D9                     -0.006788   0.042609  -0.159  0.87343
+#27 gap3.n                 -0.02348    0.04430  -0.530    0.596  
+#28 gap3.mean.area         -0.28471    0.04229  -6.732 1.67e-11 *** 
+#29 gap3.sd.area            0.13867    0.03288   4.218 2.47e-05 ***
+#30 gap3.sum.area          -0.07614    0.04056  -1.877  0.06048 .  
+#31 gap5.n                  0.01523    0.04439   0.343    0.731 
+#32 gap5.mean.area         -0.37995    0.04337  -8.761   <2e-16 ***
+#33 gap5.sd.area            0.14609    0.03293   4.436 9.17e-06 ***
+#34 gap5.sum.area          -0.08332    0.04044  -2.060  0.03939 *  
+#35 ttops.n                -0.03449    0.04252  -0.811  0.41723 
+#36 crown.mean.size         0.034706   0.025866   1.342    0.180
+#37 crown.sd.size           0.05820    0.02944   1.977   0.0481 *  
+#38 ttops.mean.height       0.55398    0.04489  12.340   <2e-16 ***
+#39 ttops.sd.height         0.32153    0.04010   8.019 1.07e-15 ***
+#40 water.distance         -0.0026756  0.0003163  -8.460   <2e-16 ***
 
 # Try including:
 # hmax, D7, D8, gap3.mean.area, gap3.sum.area, gap5.mean.area, gap5.sum.area, ttops.n  
