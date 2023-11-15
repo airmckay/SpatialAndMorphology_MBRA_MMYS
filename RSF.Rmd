@@ -91,6 +91,10 @@ names(vars)
 
 # [46] "DIST"              "geom"   
 
+## For writing descriptions of each variable 
+
+mettext <- as.data.frame(names(vars))
+write.csv(mettext, "~mettext.csv")
 ```
 
 # Housekeeping of LiDAR data 
@@ -266,6 +270,8 @@ fit = glmer(used ~ Species + hmax + D7 + D8 +
               family=binomial(link="logit"),nAGQ = 0)
 
 summary(fit)
+
+summary(vars)
 # Correlation matrix not shown by default, as p = 20 > 12.
 # Use print(x, correlation=TRUE)  or
 #     vcov(x)        if you need it
