@@ -26,8 +26,6 @@ library(kableExtra)
 library(lme4)
 library(stats)
 library(DHARMa)
-library(lattice)
-library(broom)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -74,262 +72,127 @@ names(vars)
 # [31] "D8"                "D9"                "gap3.n"            "gap3.mean.area"    "gap3.sd.area"     
 # [36] "gap3.sum.area"     "gap5.n"            "gap5.mean.area"    "gap5.sd.area"      "gap5.sum.area"    
 # [41] "ttops.n"           "crown.mean.size"   "crown.sd.size"     "ttops.mean.height" "ttops.sd.height"  
-# [46] "water.distance"    "water.objtype"     "YOD"               "DIST"              "geom"           
+# [46] "water.distance"    "water.objtype"     "YOD"               "DIST"              "geom"         
 
 ## For writing descriptions of each variable 
 
-#mettext <- as.data.frame(names(vars))
+mettext <- as.data.frame(names(vars))
 # write.csv(mettext, "~mettext.csv") # 15.11.2023
 ```
 
 # Housekeeping of LiDAR data 
 
 ```{r}
-str(vars)
-summary(vars)
+
+vars$Species=as.factor(vars$Species)
+vars$BatID=as.factor(vars$BatID)
+
+vars$gap3.n <- as.numeric(vars$gap3.n)
+vars$gap5.n <- as.numeric(vars$gap5.n)
+vars$ttops.n <- as.numeric(vars$ttops.n)
 
 
-# Hans Ole: HOW TO DEAL WITH NAs:
-dt <- vars
-summary(dt[is.na(dt$Hmean),])
-dt$H10[is.na(dt$Hmax)] <- 0.5
-dt$Hmean[is.na(dt$Hmean)] <- 0.5
-dt$H10[is.na(dt$H10)] <- 0.5
-dt$H20[is.na(dt$H20)] <- 0.5
-dt$H30[is.na(dt$H30)] <- 0.5
-dt$H40[is.na(dt$H40)] <- 0.5
-dt$H50[is.na(dt$H50)] <- 0.5
-dt$H60[is.na(dt$H60)] <- 0.5
-dt$H70[is.na(dt$H70)] <- 0.5
-dt$H80[is.na(dt$H80)] <- 0.5
-dt$H90[is.na(dt$H90)] <- 0.5
-dt$H95[is.na(dt$H95)] <- 0.5
-set.seed(123)
-un <- runif(10000)
 
-dt$Hsd[is.na(dt$Hsd)] <- sd(un)
-dt$Hcv[is.na(dt$Hcv)] <- dt$Hsd[is.na(dt$Hcv)] / dt$Hmean[is.na(dt$Hcv)]
-dt$crown.mean.size[is.na(dt$crown.mean.size)] <- 0
-dt$ttops.mean.height[is.na(dt$ttops.mean.height)] <- 0
-
-dt$gap5.sd.area[is.na(dt$gap5.sd.area)] <- 0
-dt$gap3.sd.area[is.na(dt$gap3.sd.area)] <- 0
-dt$crown.sd.size[is.na(dt$crown.sd.size)] <- 0
-dt$ttops.sd.height[is.na(dt$ttops.sd.height)] <- 0
-summary(dt)
-
-# Hmax -Inf = 0.5
-dt$Hmax[dt$Hmax == "-Inf"] <- 0.5
-
-## NAs for Hkurt and Hskewness: 
-#  Generate a uniform distribution between 0 and 1 and compute the value of that
-
-# Hkurt NA = -1.183527 
-dt$Hkurt[is.na(dt$Hkurt)] <- -1.183527 
-
-# Hskewness NA = 0.004507174 
-dt$Hskewness[is.na(dt$Hskewness)] <- -0.004507174 
-
-
-dt$Species=as.factor(dt$Species)
-dt$BatID=as.factor(dt$BatID)
-dt$water.objtype=as.factor(dt$water.objtype)
-
-dt$YOD[is.na(dt$YOD)] <- "Undetected"
-dt$YOD=as.factor(dt$YOD)
-
+var1 <- vars %>% select(BatID, Easting, Northing, used, Species, Hmax, 
+                        D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+                        gap3.mean.area, gap3.sum.area, 
+                        gap5.n, gap5.mean.area, gap5.sum.area, 
+                        ttops.n)
 # 16522 obs of 23 vars 
 
-dt1 <- dt # Use this to scale all continuous numerical data besides distance to water 
+summary(var1)
+summary(var1$Hmax) # There are -Inf values which I will replace with 0 
 
-dt1[,7:45]=scale(dt1[,7:45], scale=TRUE) #
+var1$Hmax <- as.character(var1$Hmax)
+var1 <- var1 %>% mutate(hmax = str_replace(Hmax, "-Inf", "0")) 
+var1$hmax <- as.numeric(var1$hmax)
 
-names(dt1)
+var1 <- var1 %>% select(-Hmax)
 
+summary(var1$hmax)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #  0.00   17.81   23.77   21.41   27.50   99.77 
 
-```
+## Scale numeric variables to mean = 0 
+var1 <- as.data.frame(var1)
 
-# Model selection 
-- Start by fitting a simplified model for each LiDAR and environmental variable 
-- Compare the summaries of these models to find which variables have some influence on bat species presence
-- Select variables that have some influence on the bat species presence to create a more complex model. 
-- Use the drop1() function to create the least complex / most complex model. 
-
-```{r}
-
-## Simple models 
-
-# Hmax
-fit1 = glmer(used ~ Species + Hmax + Hmax*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# Hmean
-fit2 = glmer(used ~ Species + Hmean + Hmean*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# Hsd 
-fit3 = glmer(used ~ Species + Hsd + Hsd*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hcv
-fit4 = glmer(used ~ Species + Hcv + Hcv*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hkurt
-fit5 = glmer(used ~ Species + Hkurt + Hkurt*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hskewness
-fit6 = glmer(used ~ Species + Hskewness + Hskewness*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H10
-fit7 = glmer(used ~ Species + H10 + H10*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H20
-fit8 = glmer(used ~ Species + H20 + H20*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H30
-fit9 = glmer(used ~ Species + H30 + H30*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H40
-fit10 = glmer(used ~ Species + H40 + H40*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H50
-fit11 = glmer(used ~ Species + H50 + H50*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H60
-fit12 = glmer(used ~ Species + H60 + H60*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H70
-fit13 = glmer(used ~ Species + H70 + H70*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H80
-fit14 = glmer(used ~ Species + H80 + H80*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H90
-fit15 = glmer(used ~ Species + H90 + H90*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular')
-
-# H95
-fit16 = glmer(used ~ Species + H95 + H95*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular')
+var1[,6:20]=scale(var1[,6:20],scale=TRUE) #
+# Try scale(rep(1, 10))
 
 
-fit17 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=dt1,
+
+# Make one large complex model with all variables
+
+# If the NAs cause too many issues, discard all NAs and try again.
+
+################################################################################
+
+fit1 = glmer(used ~ Species + hmax + hmax*Species + (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0) # that works! 
+
+fit2 = glmer(used ~ Species + D0 + D0*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit18 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=dt1,
+fit3 = glmer(used ~ Species + D1 + D1*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit19 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=dt1,
+fit4 = glmer(used ~ Species + D2 + D2*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit20 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=dt1,
+fit5 = glmer(used ~ Species + D3 + D3*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit21 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=dt1,
+fit6 = glmer(used ~ Species + D4 + D4*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 
-fit22 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=dt1,
+fit7 = glmer(used ~ Species + D5 + D5*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 #boundary (singular) fit: see help('isSingular')
 
-fit23 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=dt1,
+fit8 = glmer(used ~ Species + D6 + D6*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit24 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=dt1,
+fit9 = glmer(used ~ Species + D7 + D7*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit25 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=dt1,
+fit10 = glmer(used ~ Species + D8 + D8*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit26 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=dt1,
+fit11 = glmer(used ~ Species + D9 + D9*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit27 = glmer(used ~ Species + gap3.n + gap3.n*Species + (1|BatID), data=dt1,
+fit12 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit28 = glmer(used ~ Species + gap3.mean.area + gap3.mean.area*Species + (1|BatID), data=dt1,
+fit13 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit29 = glmer(used ~ Species + gap3.sd.area + gap3.sd.area*Species + (1|BatID), data=dt1,
+fit14 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit30 = glmer(used ~ Species + gap3.sum.area + gap3.sum.area*Species + (1|BatID), data=dt1,
+fit15 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit31 = glmer(used ~ Species + gap5.n + gap5.n*Species + (1|BatID), data=dt1,
+fit16 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular')
 
-fit32 = glmer(used ~ Species + gap5.mean.area + gap5.mean.area*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit33 = glmer(used ~ Species + gap5.sd.area + gap5.sd.area*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit34 = glmer(used ~ Species + gap5.sum.area + gap5.sum.area*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit35 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=dt1,
+fit17 = glmer(used ~ Species + ttops.n + ttops.n*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
 # boundary (singular) fit: see help('isSingular') 
 
-fit36 = glmer(used ~ Species + crown.mean.size + crown.mean.size*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit37 = glmer(used ~ Species + crown.sd.size + crown.sd.size*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit38 = glmer(used ~ Species + ttops.mean.height + ttops.mean.height*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit39 = glmer(used ~ Species + ttops.sd.height + ttops.sd.height*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit40 = glmer(used ~ Species + water.distance + water.distance*Species + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-
-# NOTE: 
-# error message "boundary (singular) fit: see help('isSingular')" interpretted as: 
-# Your model did fit, but it generated that warning because your random effects are very small. 
 
 ################################################################################
 
@@ -350,492 +213,159 @@ summary(fit14)
 summary(fit15)
 summary(fit16)
 summary(fit17) 
-summary(fit18)
-summary(fit19)
-summary(fit20)
-summary(fit21)
-summary(fit22)
-summary(fit23)
-summary(fit24)
-summary(fit25)
-summary(fit26)
-summary(fit27)
-summary(fit28)
-summary(fit29)
-summary(fit30)
-summary(fit31)
-summary(fit32)
-summary(fit33)
-summary(fit34)
-summary(fit35)
-summary(fit36)
-summary(fit37)
-summary(fit38)
-summary(fit39)
-summary(fit40) 
+
 #                                         Fixed effects:
 #                             Estimate Std. Error z value Pr(>|z|)  
-# 1 Hmax                     0.54393    0.04829  11.263   <2e-16 ***
-# SpeciesM.mystacinus:Hmax   0.12999    0.07452   1.744   0.0811 .
-##                                                            Include
+#     hmax                    0.061922   0.005498  11.262   <2e-16 ***
+#     D0                      0.01965    0.03954   0.497  0.61915 
+#     D1                      0.01944    0.03975   0.489  0.62474 
+#     D2                      0.02199    0.03999   0.550  0.58247 
+#     D3                      0.02391    0.04039   0.592  0.55381 
+#     D4                      0.03034    0.04075   0.744  0.45659 
+#     D5                      0.03905    0.04118   0.948  0.34289 
+#     D6                      0.04354    0.04195   1.038  0.29923  #incelude
+#     D7                      0.04469    0.04296   1.040  0.29816  #include 
+#     D8                      0.03264    0.04338   0.752  0.45184
+#     D9                     -0.001586   0.042216  -0.038  0.97003 
+# gap3.mean.area             -0.26190    0.04041  -6.481 9.09e-11 ***
+# gap3.sum.area              -0.16610    0.03966  -4.188 2.81e-05 ***
+# gap5.n                      0.01432    0.03931   0.364 0.715738   
+# gap5.mean.area             -0.276859   0.040154  -6.895 5.39e-12 ***
+# gap5.sum.area              -0.16025    0.03956  -4.051 5.09e-05 ***
+# ttops.n                     0.0016286  0.0008238   1.977   0.0481 *  
 
-# 2 Hmean                    0.46300    0.03950  11.721   <2e-16 ***
-# SpeciesM.mystacinus:Hmean  0.03609    0.05762   0.626   0.5312   
-
-# 3 Hsd                      0.48800    0.04226  11.547   <2e-16 ***
-# SpeciesM.mystacinus:Hsd  0.01335    0.06028   0.221    0.825   
-
-# 4 Hcv                     -0.06906    0.04110  -1.680   0.0929 .
-# SpeciesM.mystacinus:Hcv -0.05711    0.05645  -1.012   0.3117    
-
-# 5 Hkurt                   -0.203448   0.071384  -2.850  0.00437 ** 
-# SpeciesM.mystacinus:Hkurt  0.041458   0.096994   0.427  0.66907    
-
-# 6 Hskewness               -0.22055    0.04511  -4.890 1.01e-06 ***
-#SpeciesM.mystacinus:Hskewness -0.13416    0.06485  -2.069   0.0385 *  
-##                                                            Include
-
-# 7 H10                      0.23860    0.03590   6.647    3e-11 ***
-# SpeciesM.mystacinus:H10   -0.05616    0.04844  -1.159    0.246   
-
-# 8 H20                      0.32616    0.03664   8.901   <2e-16 ***
-#SpeciesM.mystacinus:H20    -0.03620    0.05019  -0.721    0.471    
-
-
-# 9 H30                      0.36262    0.03750   9.669   <2e-16 ***
-# SpeciesM.mystacinus:H30   -0.01296    0.05218  -0.248    0.804
-
-#10 H40                      0.4046948  0.0382771  10.573   <2e-16 ***
-# SpeciesM.mystacinus:H40   -0.0008201  0.0540620  -0.015   0.9879 
-
-#11 H50                      0.4586793  0.0391807  11.707   <2e-16 ***
-# SpeciesM.mystacinus:H50    0.0002274  0.0561859   0.004   0.9968 
-
-#12 H60                      0.48669    0.04032  12.069   <2e-16 ***
-# SpeciesM.mystacinus:H60    0.05673    0.05934   0.956   0.3391 
-
-#13 H70                      0.49908    0.04135  12.070   <2e-16 ***
-# SpeciesM.mystacinus:H70    0.09672    0.06206   1.558   0.1192 
-
-#14 H80                      0.50816    0.04249  11.958  < 2e-16 ***
-# SpeciesM.mystacinus:H80    0.11685    0.06463   1.808  0.07061 . 
-##                                                            Include
-
-#15 H90                      0.51921    0.04374  11.869  < 2e-16 ***
-# SpeciesM.mystacinus:H90    0.11151    0.06715   1.661  0.09680 .  
-##                                                            Include
-
-#16 H95                      0.55640    0.04513  12.329   <2e-16 ***
-# H95                        0.55640    0.04513  12.329   <2e-16 ***
-##                                                            Include
-
-#17 D0                       0.01242    0.03960   0.314  0.75370 
-# SpeciesM.mystacinus:D0  0.15004    0.05415   2.771  0.00559 ** 
-##                                                            Include
-
-#18 D1                       0.01567    0.03968   0.395  0.69295
-# SpeciesM.mystacinus:D1     0.14841    0.05396   2.750  0.00595 ** 
-##                                                            Include
-
-#19 D2                       0.01722    0.03992   0.431  0.66625 
-# SpeciesM.mystacinus:D2     0.15716    0.05386   2.918  0.00352 ** 
-##                                                            Include
-
-#20 D3                       0.02071    0.04026   0.514  0.60701 
-# SpeciesM.mystacinus:D3     0.16627    0.05374   3.094  0.00197 ** 
-##                                                            Include
-
-#21 D4                      0.02433    0.04068   0.598  0.54984 
-# SpeciesM.mystacinus:D4    0.17315    0.05360   3.231  0.00123 ** 
-##                                                            Include
-
-#22 D5                      0.03233    0.04113   0.786  0.43180    
-# SpeciesM.mystacinus:D5    0.17039    0.05331   3.196  0.00139 ** 
-##                                                            Include
-
-#23 D6                      0.03934    0.04183   0.940  0.3470
-# SpeciesM.mystacinus:D6    0.16148    0.05302   3.046  0.00232 ** 
-##                                                            Include
-
-#24 D7                      0.03999    0.04292   0.932  0.35147
-#SpeciesM.mystacinus:D7  0.14866    0.05305   2.802  0.00507 ** 
-##                                                            Include
-
-#25 D8                      0.02920    0.04351   0.671  0.50214 
-#   SpeciesM.mystacinus:D9  0.154928   0.052931   2.927  0.00342 ** 
-##                                                            Include
-
-#26 D9                     -0.006788   0.042609  -0.159  0.87343
-# SpeciesM.mystacinus:D9  0.154928   0.052931   2.927  0.00342 ** 
-##                                                            Include
-
-#27 gap3.n                 -0.02348    0.04430  -0.530    0.596 
-# SpeciesM.mystacinus:gap3.n  0.25298    0.05399   4.686 2.79e-06 ***
-##                                                            Include
-
-#28 gap3.mean.area                    -0.28471    0.04229  -6.732 1.67e-11 *** 
-# SpeciesM.mystacinus:gap3.mean.area  0.04360    0.06088   0.716    0.474  
-
-#29 gap3.sd.area            0.13867    0.03288   4.218 2.47e-05 ***
-#SpeciesM.mystacinus:gap3.sd.area  0.01876    0.04958   0.378    0.705
-
-#30 gap3.sum.area                  -0.07614    0.04056  -1.877  0.06048 .  
-#SpeciesM.mystacinus:gap3.sum.area -0.14074    0.05445  -2.585  0.00975 ** 
-##                                                            Include
-
-#31 gap5.n                   0.01523    0.04439   0.343    0.731 
-#SpeciesM.mystacinus:gap5.n  0.20794    0.05325   3.905 9.43e-05 *** 
-##                                                            Include
-
-#32 gap5.mean.area                  -0.37995    0.04337  -8.761   <2e-16 ***
-#SpeciesM.mystacinus:gap5.mean.area  0.15441    0.06141   2.514   0.0119 *  
-##                                                            Include
-
-#33 gap5.sd.area            0.14609    0.03293   4.436 9.17e-06 ***
-# SpeciesM.mystacinus:gap5.sd.area -0.14534    0.05233  -2.777  0.00548 **
-##                                                            Include
-
-#34 gap5.sum.area                  -0.08332    0.04044  -2.060  0.03939 *  
-#SpeciesM.mystacinus:gap5.sum.area -0.14637    0.05386  -2.718  0.00657 **
-##                                                            Include
-
-#35 ttops.n                  -0.03449    0.04252  -0.811  0.41723 
-#SpeciesM.mystacinus:ttops.n  0.17876    0.05599   3.193  0.00141 ** 
-##                                                            Include
-
-#36 crown.mean.size                   0.034706   0.025866   1.342    0.180
-#SpeciesM.mystacinus:crown.mean.size -0.001329   0.050622  -0.026    0.979 
-
-#37 crown.sd.size                   0.05820    0.02944   1.977   0.0481 *  
-#SpeciesM.mystacinus:crown.sd.size  0.02729    0.04932   0.553   0.5801
-
-#38 ttops.mean.height                   0.55398    0.04489  12.340   <2e-16 ***
-#SpeciesM.mystacinus:ttops.mean.height -0.02041    0.06539  -0.312    0.755  
-
-#39 ttops.sd.height                   0.32153    0.04010   8.019 1.07e-15 ***
-#SpeciesM.mystacinus:ttops.sd.height  0.11273    0.05613   2.008   0.0446 * 
-##                                                            Include
-
-#40 water.distance                    -0.0026756  0.0003163  -8.460   <2e-16 ***
-# SpeciesM.mystacinus:water.distance  0.0002975  0.0004416   0.674     0.50   
-
-
-### Check collineartiy here then build a complex model 
-
-dttest <- dt1 %>% dplyr::select(c(
-  Hmax, Hskewness, 
-  H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.sum.area, 
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.sd.height)) 
-
-library(corrplot)
-windows() 
-corrplot(cor(dttest))
-corrplot(cor(dttest), type = "lower")
+# Try including:
+# hmax, D7, D8, gap3.mean.area, gap3.sum.area, gap5.mean.area, gap5.sum.area, ttops.n  
 
               
-fit = glmer(used ~ Species + 
-              Hmax + Hmean + Hsd + Hcv + Hkurt + Hskewness + 
-              H10 + H20 + H30 + H40 + H50 + H60 + H70 + H80 + H90 + H95 + 
-              D6 + 
-              gap3.mean.area + gap3.sd.area + gap3.sum.area +
-              gap5.mean.area + gap5.sd.area + gap5.sum.area +
-              crown.sd.size + ttops.mean.height + ttops.sd.height + 
-              water.distance + 
-              Hmax*Species + Hmean*Species +
-              Hsd*Species + Hcv*Species +
-              Hkurt*Species + Hskewness*Species +
-              H10*Species + H20*Species +
-              H30*Species + H40*Species +
-              H50*Species + H60*Species + 
-              H70*Species + H80*Species + 
-              H90*Species + H95*Species + 
-              D6*Species +
+fit = glmer(used ~ Species + hmax + D7 + D8 + 
+              gap3.mean.area + gap3.sum.area +
+              gap5.mean.area + gap5.sum.area + ttops.n +
+              hmax*Species +
+              D7*Species +
+              D8*Species + 
               gap3.mean.area*Species +
-              gap3.sd.area*Species +
-              gap3.sum.area*Species + 
+              gap3.sum.area*Species +
+              gap5.n*Species +
               gap5.mean.area*Species +
-              gap5.sd.area*Species +
               gap5.sum.area*Species +
-              crown.sd.size*Species + 
-              ttops.mean.height*Species +
-              ttops.sd.height*Species +
-              water.distance*Species + 
-              (1|BatID), data=dt1,
+              ttops.n*Species + (1|BatID), data=var1,
               family=binomial(link="logit"),nAGQ = 0)
-
-fit
 
 summary(fit)
-# Correlation matrix not shown by default, as p = 56 > 12.
+
+summary(vars)
+# Correlation matrix not shown by default, as p = 20 > 12.
 # Use print(x, correlation=TRUE)  or
 #     vcov(x)        if you need it
 
-#      AIC      BIC   logLik deviance df.resid 
-#   9181.2   9620.7  -4533.6   9067.2    16427 
-# 
-# Scaled residuals: 
-#    Min     1Q Median     3Q    Max 
-# -2.235 -0.354 -0.254 -0.158 39.232 
-# 
-# Random effects:
-#  Groups Name        Variance Std.Dev.
-#  BatID  (Intercept) 0.01199  0.1095  
-# Number of obs: 16484, groups:  BatID, 21
-# 
 # Fixed effects:
-#                                         Estimate Std. Error z value Pr(>|z|)    
-# (Intercept)                           -2.101e+00  8.818e-02 -23.831  < 2e-16 ***
-# SpeciesM.mystacinus                    1.614e-02  1.173e-01   0.138 0.890601    
-# Hmax                                   3.225e-01  1.563e-01   2.064 0.039042 *  
-# Hmean                                  5.074e+00  3.865e+00   1.313 0.189271    
-# Hsd                                   -1.544e+00  7.004e-01  -2.204 0.027510 *  
-# Hcv                                    2.343e-01  1.468e-01   1.596 0.110464    
-# Hkurt                                 -5.702e-01  2.245e-01  -2.540 0.011071 *  
-# Hskewness                              1.447e-01  1.776e-01   0.814 0.415397    
-# H10                                   -1.280e+00  3.872e-01  -3.305 0.000951 ***
-# H20                                    1.122e+00  5.123e-01   2.189 0.028569 *  
-# H30                                   -1.740e+00  6.835e-01  -2.546 0.010884 *  
-# H40                                   -2.313e+00  7.107e-01  -3.255 0.001136 ** 
-# H50                                    1.843e+00  8.463e-01   2.177 0.029458 *  
-# H60                                    2.258e-01  9.804e-01   0.230 0.817846    
-# H70                                   -1.327e+00  1.027e+00  -1.293 0.196070    
-# H80                                    1.543e-01  9.597e-01   0.161 0.872260    
-# H90                                   -2.402e+00  7.153e-01  -3.358 0.000785 ***
-# H95                                    1.563e+00  7.373e-01   2.120 0.034018 *  
-# D6                                    -3.509e-01  1.549e-01  -2.265 0.023542 *  
-# gap3.mean.area                         1.077e+00  1.766e-01   6.101 1.06e-09 ***
-# gap3.sd.area                           3.212e-01  6.713e-02   4.785 1.71e-06 ***
-# gap3.sum.area                         -6.296e-01  6.636e-01  -0.949 0.342728    
-# gap5.mean.area                        -1.441e+00  1.883e-01  -7.652 1.98e-14 ***
-# gap5.sd.area                          -4.686e-01  7.971e-02  -5.879 4.14e-09 ***
-# gap5.sum.area                          7.662e-01  6.865e-01   1.116 0.264345    
-# crown.sd.size                         -1.232e-02  3.636e-02  -0.339 0.734615    
-# ttops.mean.height                      4.150e-01  1.234e-01   3.363 0.000772 ***
-# ttops.sd.height                       -3.015e-04  7.550e-02  -0.004 0.996814    
-# water.distance                        -2.756e-03  3.665e-04  -7.519 5.54e-14 ***
-# SpeciesM.mystacinus:Hmax               1.149e+00  2.629e-01   4.373 1.22e-05 ***
-# SpeciesM.mystacinus:Hmean             -1.542e+01  5.900e+00  -2.613 0.008977 ** 
-# SpeciesM.mystacinus:Hsd               -1.902e-01  1.039e+00  -0.183 0.854788    
-# SpeciesM.mystacinus:Hcv               -2.028e-01  2.413e-01  -0.840 0.400722    
-# SpeciesM.mystacinus:Hkurt              6.538e-01  2.452e-01   2.667 0.007654 ** 
-# SpeciesM.mystacinus:Hskewness         -7.419e-01  2.354e-01  -3.152 0.001621 ** 
-# SpeciesM.mystacinus:H10                1.239e+00  5.281e-01   2.346 0.018969 *  
-# SpeciesM.mystacinus:H20                3.645e-01  6.997e-01   0.521 0.602417    
-# SpeciesM.mystacinus:H30                1.649e+00  1.012e+00   1.629 0.103373    
-# SpeciesM.mystacinus:H40                4.494e+00  1.153e+00   3.898 9.69e-05 ***
-# SpeciesM.mystacinus:H50               -4.093e+00  1.289e+00  -3.174 0.001501 ** 
-# SpeciesM.mystacinus:H60                4.712e+00  1.485e+00   3.173 0.001507 ** 
-# SpeciesM.mystacinus:H70                1.719e+00  1.616e+00   1.064 0.287441    
-# SpeciesM.mystacinus:H80                2.665e+00  1.596e+00   1.669 0.095036 .  
-# SpeciesM.mystacinus:H90                2.100e+00  1.296e+00   1.621 0.105059    
-# SpeciesM.mystacinus:H95                8.088e-01  1.296e+00   0.624 0.532454    
-# SpeciesM.mystacinus:D6                 9.263e-02  2.161e-01   0.429 0.668187    
-# SpeciesM.mystacinus:gap3.mean.area    -2.164e-01  2.907e-01  -0.744 0.456751    
-# SpeciesM.mystacinus:gap3.sd.area       5.650e-02  1.071e-01   0.528 0.597732    
-# SpeciesM.mystacinus:gap3.sum.area      8.728e-01  9.645e-01   0.905 0.365528    
-# SpeciesM.mystacinus:gap5.mean.area     1.076e+00  3.026e-01   3.556 0.000377 ***
-# SpeciesM.mystacinus:gap5.sd.area       2.912e-01  1.220e-01   2.387 0.017001 *  
-# SpeciesM.mystacinus:gap5.sum.area     -1.613e+00  9.788e-01  -1.648 0.099450 .  
-# SpeciesM.mystacinus:crown.sd.size      3.901e-02  6.045e-02   0.645 0.518640    
-# SpeciesM.mystacinus:ttops.mean.height -6.556e-01  1.863e-01  -3.518 0.000434 ***
-# SpeciesM.mystacinus:ttops.sd.height    2.536e-01  1.143e-01   2.218 0.026526 *  
-# SpeciesM.mystacinus:water.distance    -1.067e-03  5.233e-04  -2.039 0.041461 *  
-  
+#                                     Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -3.031109   0.203818 -14.872  < 2e-16 ***
+# SpeciesM.mystacinus                -0.857410   0.326958  -2.622  0.00873 ** 
+# hmax                                0.062171   0.006577   9.452  < 2e-16 ***
+# D7                                  0.475638   0.519333   0.916  0.35974    
+# D8                                 -0.985025   0.487519  -2.020  0.04333 *  
+# gap3.mean.area                      0.073531   0.142566   0.516  0.60602    
+# gap3.sum.area                      -0.806492   0.468243  -1.722  0.08500 .  
+# gap5.mean.area                     -0.374586   0.137849  -2.717  0.00658 ** 
+# gap5.sum.area                      -0.116578   0.478079  -0.244  0.80735    
+# ttops.n                            -0.014025   0.003039  -4.615 3.93e-06 ***
+# gap5.n                             -0.289579   0.101587  -2.851  0.00436 ** 
+# SpeciesM.mystacinus:hmax            0.025590   0.010505   2.436  0.01486 *  
+# SpeciesM.mystacinus:D7              1.697006   0.745901   2.275  0.02290 *  
+# SpeciesM.mystacinus:D8             -0.925983   0.683899  -1.354  0.17574    
+# SpeciesM.mystacinus:gap3.mean.area  0.189162   0.207218   0.913  0.36131    
+# SpeciesM.mystacinus:gap3.sum.area   1.157127   0.667590   1.733  0.08304 .  
+# SpeciesM.mystacinus:gap5.n          0.361017   0.132003   2.735  0.00624 ** 
+# SpeciesM.mystacinus:gap5.mean.area  0.088962   0.198956   0.447  0.65477    
+# SpeciesM.mystacinus:gap5.sum.area  -0.134643   0.683743  -0.197  0.84389    
+# SpeciesM.mystacinus:ttops.n         0.005212   0.004365   1.194  0.23250    
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
 drop1(fit, test = "Chi")
-
-## Interpretting: The output expresses in a way if the model without that term is "significantly" different from the model with that term. 
-
-#                           npar    AIC     LRT   Pr(Chi)    
-# <none>                         9181.2                      
-# Species:Hmax                 1 9197.2 17.9556 2.261e-05 ***
-# Species:Hmean                1 9186.1  6.8896 0.0086696 ** 
-# Species:Hsd                  1 9179.3  0.0335 0.8547289    
-# Species:Hcv                  1 9180.0  0.7020 0.4021071    
-# Species:Hkurt                1 9187.1  7.8317 0.0051337 ** 
-# Species:Hskewness            1 9189.3 10.0888 0.0014917 ** 
-# Species:H10                  1 9184.8  5.5551 0.0184268 *  
-# Species:H20                  1 9179.5  0.2707 0.6028295    
-# Species:H30                  1 9181.9  2.6716 0.1021531    
-# Species:H40                  1 9194.7 15.4060 8.671e-05 ***
-# Species:H50                  1 9189.5 10.2399 0.0013743 ** 
-# Species:H60                  1 9189.4 10.1731 0.0014251 ** 
-# Species:H70                  1 9180.4  1.1439 0.2848367    
-# Species:H80                  1 9182.0  2.7932 0.0946660 .  
-# Species:H90                  1 9181.9  2.6674 0.1024232    
-# Species:H95                  1 9179.6  0.3896 0.5325340    
-# Species:D6                   1 9179.4  0.1836 0.6682748    
-# Species:gap3.mean.area       1 9179.8  0.5558 0.4559739    
-# Species:gap3.sd.area         1 9179.5  0.2779 0.5981052    
-# Species:gap3.sum.area        1 9180.1  0.8180 0.3657670    
-# Species:gap5.mean.area       1 9191.8 12.5976 0.0003862 ***
-# Species:gap5.sd.area         1 9184.9  5.6333 0.0176222 *  
-# Species:gap5.sum.area        1 9182.0  2.7205 0.0990678 .  
-# Species:crown.sd.size        1 9179.7  0.4127 0.5206100    
-# Species:ttops.mean.height    1 9191.5 12.2195 0.0004729 ***
-# Species:ttops.sd.height      1 9184.2  4.9277 0.0264302 *  
-# Species:water.distance       1 9183.4  4.1360 0.0419793 * 
-
-
-fit1 = glmer(used ~ Species +
-      Hmax + Hmean + Hkurt + Hskewness + 
-      H10 + H40 + H50 + H60 + H80 +
-      gap5.mean.area + gap5.sd.area + gap5.sum.area + 
-      ttops.mean.height + ttops.sd.height + 
-      water.distance*water.objtype + 
-      Hmax*Species + Hmean*Species + Hkurt*Species + Hskewness*Species + 
-      H10*Species + H40*Species + H50*Species + H60*Species + H80*Species +
-      gap5.mean.area*Species + gap5.sd.area*Species + gap5.sum.area*Species +
-      ttops.mean.height*Species + ttops.sd.height*Species + 
-      water.distance*Species + 
-      water.objtype*Species +
-              (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0)
-# fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
-fit1
-summary(fit1)
+# boundary (singular) fit: see help('isSingular')
+# boundary (singular) fit: see help('isSingular')
+# boundary (singular) fit: see help('isSingular')
+# Single term deletions
 # 
+# Model:
+# used ~ Species + hmax + D7 + D8 + gap3.mean.area + gap3.sum.area + 
+#     gap5.mean.area + gap5.sum.area + ttops.n + hmax * Species + 
+#     D7 * Species + D8 * Species + gap3.mean.area * Species + 
+#     gap3.sum.area * Species + gap5.n * Species + gap5.mean.area * 
+#     Species + gap5.sum.area * Species + ttops.n * Species + (1 | 
+#     BatID)
+#                        npar    AIC    LRT  Pr(Chi)   
+# <none>                      9599.2                   
+# Species:hmax              1 9603.2 5.9726 0.014530 * 
+# Species:D7                1 9602.4 5.1938 0.022667 * 
+# Species:D8                1 9599.0 1.8165 0.177730   
+# Species:gap3.mean.area    1 9598.0 0.8306 0.362094   
+# Species:gap3.sum.area     1 9600.2 2.9522 0.085760 . 
+# Species:gap5.n            1 9604.7 7.4534 0.006332 **
+# Species:gap5.mean.area    1 9597.4 0.1993 0.655289   
+# Species:gap5.sum.area     1 9597.3 0.0377 0.846078   
+# Species:ttops.n           1 9598.6 1.4117 0.234780   
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+fit.a = glmer(used ~ Species + hmax + D7 + 
+              gap3.sum.area +
+              gap5.mean.area +
+              gap5.n +
+              hmax*Species +
+              D7*Species +
+              gap3.sum.area*Species +
+              gap5.n*Species +
+              (1|BatID), data=var1,
+              family=binomial(link="logit"),nAGQ = 0)
+
+summary(fit.a)
 
 #      AIC      BIC   logLik deviance df.resid 
-#   8980.7   9412.5  -4434.3   8868.7    16428 
+#   9679.2   9771.7  -4827.6   9655.2    16510 
 # 
 # Scaled residuals: 
-#    Min     1Q Median     3Q    Max 
-# -3.233 -0.351 -0.237 -0.140 37.295 
+#     Min      1Q  Median      3Q     Max 
+# -3.9606 -0.3588 -0.3016 -0.2124  8.3606 
 # 
 # Random effects:
 #  Groups Name        Variance Std.Dev.
-#  BatID  (Intercept) 0.05199  0.228   
-# Number of obs: 16484, groups:  BatID, 21
-# 
+#  BatID  (Intercept) 0.002391 0.0489  
+# Number of obs: 16522, groups:  BatID, 21
+
 # Fixed effects:
-#                                                        Estimate Std. Error z value Pr(>|z|)    
-# (Intercept)                                          -1.702e+00  1.314e-01 -12.959  < 2e-16 ***
-# SpeciesM.mystacinus                                  -3.073e-01  1.723e-01  -1.784 0.074430 .  
-# Hmax                                                  1.459e-01  1.535e-01   0.951 0.341827    
-# Hmean                                                 2.410e+00  1.123e+00   2.146 0.031855 *  
-# Hkurt                                                -4.219e-01  1.639e-01  -2.574 0.010051 *  
-# Hskewness                                             2.290e-01  1.405e-01   1.631 0.102951    
-# H10                                                  -1.834e-01  1.857e-01  -0.988 0.323359    
-# H40                                                  -2.049e+00  5.058e-01  -4.052 5.08e-05 ***
-# H50                                                   1.964e+00  6.766e-01   2.903 0.003695 ** 
-# H60                                                  -3.745e-02  6.210e-01  -0.060 0.951904    
-# H80                                                  -1.937e+00  5.285e-01  -3.665 0.000248 ***
-# gap5.mean.area                                       -4.484e-01  7.661e-02  -5.852 4.85e-09 ***
-# gap5.sd.area                                         -1.871e-01  5.091e-02  -3.676 0.000237 ***
-# gap5.sum.area                                         4.805e-01  8.396e-02   5.722 1.05e-08 ***
-# ttops.mean.height                                     3.166e-01  1.155e-01   2.741 0.006133 ** 
-# ttops.sd.height                                       1.411e-02  7.389e-02   0.191 0.848581    
-# water.distance                                       -4.757e-03  6.765e-04  -7.032 2.03e-12 ***
-# water.objtypeElvBekk                                 -4.907e-01  2.030e-01  -2.417 0.015631 *  
-# water.objtypeElvekant                                 4.263e-01  1.336e-01   3.192 0.001412 ** 
-# water.objtypeInnsjø                                 -1.526e-01  2.017e-01  -0.757 0.449275    
-# water.objtypeInnsjøkant                             -3.089e-01  2.738e-01  -1.129 0.259092    
-# water.objtypeKanal                                   -1.252e+01  6.527e+02  -0.019 0.984695    
-# water.objtypeKanalGrøft                             -2.475e+00  3.455e-01  -7.163 7.91e-13 ***
-# water.objtypeKanalkant                               -1.298e+01  8.687e+02  -0.015 0.988079    
-# water.objtypeVeggrøft�\u0085pen                     -1.639e+00  2.482e-01  -6.603 4.02e-11 ***
-# water.distance:water.objtypeElvBekk                   5.280e-03  9.673e-04   5.459 4.78e-08 ***
-# water.distance:water.objtypeElvekant                 -1.620e-03  7.209e-04  -2.247 0.024661 *  
-# water.distance:water.objtypeInnsjø                  -1.749e-03  1.001e-03  -1.748 0.080486 .  
-# water.distance:water.objtypeInnsjøkant              -1.565e-03  1.024e-03  -1.529 0.126321    
-# water.distance:water.objtypeKanal                     1.059e-03  2.946e+00   0.000 0.999713    
-# water.distance:water.objtypeKanalGrøft               6.773e-03  1.119e-03   6.051 1.44e-09 ***
-# water.distance:water.objtypeKanalkant                 5.246e-03  5.069e+00   0.001 0.999174    
-# water.distance:water.objtypeVeggrøft�\u0085pen       8.584e-03  9.025e-04   9.512  < 2e-16 ***
-# SpeciesM.mystacinus:Hmax                              1.237e+00  2.430e-01   5.093 3.53e-07 ***
-# SpeciesM.mystacinus:Hmean                            -5.264e+00  1.742e+00  -3.022 0.002509 ** 
-# SpeciesM.mystacinus:Hkurt                             4.890e-01  1.883e-01   2.597 0.009411 ** 
-# SpeciesM.mystacinus:Hskewness                        -8.261e-01  1.834e-01  -4.504 6.67e-06 ***
-# SpeciesM.mystacinus:H10                               4.829e-01  2.738e-01   1.764 0.077777 .  
-# SpeciesM.mystacinus:H40                               4.193e+00  8.228e-01   5.096 3.48e-07 ***
-# SpeciesM.mystacinus:H50                              -5.473e+00  1.014e+00  -5.399 6.70e-08 ***
-# SpeciesM.mystacinus:H60                               3.814e+00  8.963e-01   4.255 2.09e-05 ***
-# SpeciesM.mystacinus:H80                               1.641e+00  8.089e-01   2.028 0.042558 *  
-# SpeciesM.mystacinus:gap5.mean.area                    9.000e-01  1.146e-01   7.856 3.96e-15 ***
-# SpeciesM.mystacinus:gap5.sd.area                      2.425e-01  7.792e-02   3.112 0.001856 ** 
-# SpeciesM.mystacinus:gap5.sum.area                    -8.290e-01  1.270e-01  -6.526 6.73e-11 ***
-# SpeciesM.mystacinus:ttops.mean.height                -5.395e-01  1.715e-01  -3.146 0.001657 ** 
-# SpeciesM.mystacinus:ttops.sd.height                   3.341e-01  1.104e-01   3.026 0.002477 ** 
-# SpeciesM.mystacinus:water.distance                    8.205e-04  6.487e-04   1.265 0.205928    
-# SpeciesM.mystacinus:water.objtypeElvBekk             -5.338e-01  3.668e-01  -1.456 0.145527    
-# SpeciesM.mystacinus:water.objtypeElvekant            -2.402e-01  1.636e-01  -1.468 0.142068    
-# SpeciesM.mystacinus:water.objtypeInnsjø             -5.228e-01  2.736e-01  -1.911 0.055994 .  
-# SpeciesM.mystacinus:water.objtypeInnsjøkant          4.863e-01  3.167e-01   1.535 0.124685    
-# SpeciesM.mystacinus:water.objtypeKanalGrøft          2.030e+00  3.310e-01   6.133 8.64e-10 ***
-# SpeciesM.mystacinus:water.objtypeKanalkant            1.887e+00  7.342e+02   0.003 0.997949    
-# SpeciesM.mystacinus:water.objtypeVeggrøft�\u0085pen  4.749e-01  2.558e-01   1.857 0.063355 .  
-
-
-# Correlation matrix not shown by default, as p = 55 > 12.
-# Use print(x, correlation=TRUE)  or
-#     vcov(x)        if you need it
-
-
-###   Address potential autocorrelation 
-
-## test with the residuals of the model 
-
-# autocorrelation <- acf(fit1, lag.max=10, type = "correlation", plot=FALSE)
-# # Plot not very easy to interpret 
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                       -3.746945   0.159518 -23.489  < 2e-16 ***
+# SpeciesM.mystacinus               -0.617348   0.248873  -2.481 0.013117 *  
+# hmax                               0.063102   0.006364   9.916  < 2e-16 ***
+# D7                                -0.472274   0.111940  -4.219 2.45e-05 ***
+# gap3.sum.area                     -0.490264   0.135013  -3.631 0.000282 ***
+# gap5.mean.area                    -0.113331   0.058367  -1.942 0.052175 .  
+# gap5.n                            -0.326123   0.086226  -3.782 0.000155 ***
+# SpeciesM.mystacinus:hmax           0.024180   0.009996   2.419 0.015568 *  
+# SpeciesM.mystacinus:D7             0.683922   0.130930   5.224 1.75e-07 ***
+# SpeciesM.mystacinus:gap3.sum.area  1.071932   0.163935   6.539 6.20e-11 ***
+# SpeciesM.mystacinus:gap5.n         0.550539   0.111179   4.952 7.35e-07 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
-# # Plot figure
-# 
-# plot(autocorrelation,
-#      main="Autocorrelation",
-#      xlab="Lag Parameter",
-#      ylab="ACF")
+# Correlation of Fixed Effects:
+#             (Intr) SpcsM. hmax   D7     gp3.s. gp5.m. gap5.n SpcM.: SM.:D7 SM.:3.
+# SpcsM.mystc -0.631                                                               
+# hmax        -0.960  0.604                                                        
+# D7           0.018  0.002  0.028                                                 
+# gap3.sum.ar -0.142  0.137  0.184  0.640                                          
+# gap5.mean.r -0.102 -0.034  0.114 -0.135 -0.464                                   
+# gap5.n      -0.063  0.042  0.091 -0.146  0.465 -0.009                            
+# SpcsM.myst:  0.597 -0.968 -0.621 -0.036 -0.179  0.061 -0.059                     
+# SpcsM.my:D7 -0.003 -0.060 -0.038 -0.838 -0.490 -0.009  0.126  0.094              
+# SpcsM.m:3..  0.153 -0.278 -0.192 -0.479 -0.659  0.027 -0.380  0.332  0.662       
+# SpcsM.my:5.  0.051 -0.093 -0.073  0.117 -0.351 -0.015 -0.775  0.116 -0.074  0.572
 
-
-```
-
-
-## Check correlation of fixed effects
-```{r}
-
-dt2 <- dt1 %>% dplyr::select(c(
-  Hmax, Hmean, Hkurt, Hskewness, 
-  H10, H40,  H50, H60, H80, 
-  gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.mean.height, ttops.sd.height, 
-  water.distance)) 
-
-library(corrplot)
-windows() 
-corrplot(cor(dt2))
-
-
-
-library(performance)
-summary(fit1)
-print(fit1, correlation=TRUE) 
-
-check_model(fit1) 
-
-
-vc <- vcov(fit1)
-
-# diagonal matrix of standard deviations associated with vcov
-S <- sqrt(diag(diag(vc), nrow(vc), nrow(vc)))
-
-# convert vc to a correlation matrix
-solve(S) %*% vc %*% solve(S)
-
-
-testDispersion(fit1)
-
-simulationOutput <- simulateResiduals(fittedModel = fit1, plot = F)
-residuals(simulationOutput)
-
-residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
-
-plot(simulationOutput)
-
-testDispersion(simulationOutput)
-
-# testSpatialAutocorrelation(simulationOutput = simulationOutput, x = dt1$Easting, y= dt2$Northing) - this does not work 
 ```
 
 
