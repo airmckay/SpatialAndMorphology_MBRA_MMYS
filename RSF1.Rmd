@@ -157,7 +157,7 @@ names(dt1)
 
 ```{r}
 
-## Simple models 
+## Simple models - separated by bat species, no species interaction 
 
 # Hmax
 fit1 = glmer(used ~ Species + Hmax + Hmax*Species + (1|BatID), data=dt1,
