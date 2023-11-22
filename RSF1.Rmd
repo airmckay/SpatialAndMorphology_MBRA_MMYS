@@ -33,6 +33,8 @@ library(kableExtra)
 library(gt)
 library(readxl)
 library(xlsx)
+library(corrplot)
+library(vegan)
 
 getwd()
 # "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
@@ -145,16 +147,238 @@ dt$YOD=as.factor(dt$YOD)
 
 # 16522 obs of 23 vars 
 
-dt1 <- dt # Use this to scale all continuous numerical data besides distance to water 
+
+dt1 <- dt # Use this to scale all continuous numerical data besides distance to water
 
 dt1[,7:46]=scale(dt1[,7:46], scale=TRUE) #
-
-names(dt1)
+#
+# names(dt1)
 
 
 ```
 
-# Model selection 
+
+## Correlation/collinearity between LiDAR variables 
+```{r}
+names(dt1)
+dtc <- dt1 %>% dplyr::select(c(
+  Hmax, Hmean, Hsd, Hcv, Hskewness, 
+  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+  ttops.n, ttops.mean.height, ttops.sd.height)) 
+
+windows()
+
+corrplot(cor(dtc))
+```
+
+
+
+# NMDS ordination of available points to address collinearity and discern patterns in how variables influence each other 
+
+```{r}
+## Subset dt1 to only include available (random) points
+# convert dt1 to a data frame and drop geom column (remove spatial data)
+# dt1df <- as.data.frame(dt1)
+# dt1df <- dt1df %>% select(-geom)
+# 
+# dt1a <- dt1df %>% dplyr::filter(used == 0) 
+# dim(dt1a)
+# # 14982    49
+
+### Now to  have nonzero values: 
+dt1df <- as.data.frame(dt1)
+dt1df <- dt1df %>% select(-geom)
+
+dt1a <- dt1df %>% dplyr::filter(used == 0) 
+dim(dt1a)
+# 14982    49
+
+
+## Create an ID column so the bat meta data can be reattached later
+
+## Create a unique row id which will become "idvar"
+
+dt1a$idvar <- paste0("ID-", 1:nrow(dt1a)) 
+headings <- dt1a$idvar
+
+## Now only includeLiDAR variables with IDvar
+names(dt1a)
+
+dt2a <- dt1a %>% dplyr::select(c(
+  Hmax, Hmean, Hsd, Hcv, Hskewness, 
+  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+  ttops.n, ttops.mean.height, ttops.sd.height)) 
+## Remove hskewness for now because it has negative values... 
+rownames(dt2a) <- headings
+# Reshape into wide format 
+
+summary(dt2a)
+
+## This is a PCA, more info below: 
+
+mat <- dt2a 
+trait.pca <- rda(mat, scale = TRUE) 
+
+# -----------------------------------------------------------------------------
+# rda = redundancy analysis
+# normally RDA is used for “constrained ordination” (ordination w/covariates or predictor)
+# without predictors, RDA is the same as PCA
+# in vegan, givig the function rda() dataframe without predictors runs a PCA very simiar to princomp
+
+### "Whereas PCA calculates the synthetic axes that minimize the total error sum of squares for a linear combination of the response variables, RDA calculates the synthetic axes that have the best linear combination of the response variables with the provided explanatory variables." 
+
+#help(rda):
+#"Constrained correspondence analysis is indeed a constrained method: CCA does not try to display all variation in the data, but only the part that can be explained by the used constraints. Consequently, the results are strongly dependent on the set of constraints and their transformations or interactions among the constraints. The shotgun method is to use all environmental variables as constraints. However, such exploratory problems are better analysed with unconstrained methods such as correspondence analysis (decorana, corresp) or non-metric multidimensional scaling (metaMDS) and environmental interpretation after analysis (envfit, ordisurf). CCA is a good choice if the user has clear and strong a priori hypotheses on constraints and is not interested in the major structure in the data set."
+
+#Partial CCA (pCCA; or alternatively partial RDA) can be used to remove the effect of some conditioning or background or random variables or covariables before CCA proper. In fact, pCCA compares models cca(X ~ Z) and cca(X ~ Y + Z) and attributes their difference to the effect of Y cleansed of the effect of Z. Some people have used the method for extracting “components of variance” in CCA. However, if the effect of variables together is stronger than sum of both separately, this can increase total Chi-square after partialling out some variation, and give negative “components of variance”. In general, such components of “variance” are not to be trusted due to interactions between two sets of variables.
+# -----------------------------------------------------------------------------
+
+biplot(trait.pca) # simple plot 
+screeplot(trait.pca) # how much of each axis describes the variation in the data 
+
+summary(trait.pca)
+
+pca.summary <- summary(trait.pca)
+
+trait.loadings <- as.data.frame(pca.summary$species) %>% 
+  mutate(trait = rownames(.))  
+head(trait.loadings)
+
+
+sp.scores <- as.data.frame(pca.summary$sites) %>% 
+  mutate(gen.spe = rownames(.)) 
+
+
+## PC1 and PC2
+pca.ggplot <- ggplot(data = sp.scores, aes(x = PC1, y = PC2)) +
+  geom_point() +
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + # this is a new geom that allows you to draw segments like the ones for the loadings above
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + # this adds text to the labels
+  theme_bw() 
+pca.ggplot
+
+## PC1 and PC3
+pca.ggplot <- ggplot(data = sp.scores, aes(x = PC1, y = PC3)) +
+  geom_point() +
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + # this is a new geom that allows you to draw segments like the ones for the loadings above
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + # this adds text to the labels
+  theme_bw() 
+pca.ggplot
+
+
+################## Now do it once more if used and available points together
+
+dt1 <- dt1df 
+## Create a unique row id which will become "idvar"
+
+dt1$idvar <- paste0("ID-", 1:nrow(dt1)) 
+headings <- dt1$idvar
+
+## Now only includeLiDAR variables with IDvar
+names(dt1)
+
+dt2. <- dt1 %>% dplyr::select(c(
+  Hmax, Hmean, Hsd, Hcv, Hskewness, 
+  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+  ttops.n, ttops.mean.height, ttops.sd.height)) 
+## Remove hskewness for now because it has negative values... 
+rownames(dt2.) <- headings
+# Reshape into wide format 
+
+summary(dt2.)
+
+meta <- dt1 %>% dplyr::select(c(used, Species, idvar)) # for now, do not include bat species or ID
+
+mat1 <- dt2. 
+trait.pca1 <- rda(mat1, scale = TRUE) 
+
+
+biplot(trait.pca1) # simple plot 
+screeplot(trait.pca1) # how much of each axis describes the variation in the data 
+
+summary(trait.pca1)
+
+pca.summary1 <- summary(trait.pca1)
+
+trait.loadings1 <- as.data.frame(pca.summary1$species) %>% 
+  mutate(trait = rownames(.))  
+head(trait.loadings1)
+
+rownames(meta) <- meta$idvar
+meta$gen.spe <- meta$idvar
+meta$used <- as.factor(meta$used)
+
+sp.scores1 <- as.data.frame(pca.summary1$sites) %>% 
+  mutate(gen.spe = rownames(.)) %>% inner_join(meta) # now used data is there 
+
+cols <- c("0" = "gray", "1" = "red")
+col2 <- c("MBRA" = "skyblue", "MMYS" = "darkblue")
+
+## PC1 and PC2 - used is color 
+pca.ggplot <- ggplot(data = sp.scores1, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = used), alpha = 0.3) +
+  scale_color_manual(values = cols)+ 
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) +
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + 
+  theme_bw() 
+pca.ggplot
+
+## PC1 and PC2 - used is color, separated by species 
+pca.ggplot <- ggplot(data = sp.scores1, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = used), alpha = 0.3) +
+  scale_color_manual(values = cols)+ 
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) +
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + facet_wrap(~Species) +
+  theme_bw() 
+pca.ggplot
+
+
+pca.ggplot <- ggplot(data = sp.scores1, aes(x = PC1, y = PC2)) +
+  geom_point(aes(color = used), alpha = 0.3) +
+  scale_color_manual(values = cols)+ 
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) +
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + 
+  theme_bw() 
+pca.ggplot
+
+
+## PC1 and PC3
+pca.ggplot <- ggplot(data = sp.scores1, aes(x = PC1, y = PC3)) +
+  geom_point(aes(color = used), alpha = 0.3) +
+  scale_color_manual(values = cols)+ 
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + 
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + # this adds text to the labels
+  theme_bw() 
+pca.ggplot
+
+
+```
+
+
+
+
+
+
+
+
+
+
+# Model selection (explortatory approach with simplified models of each variable)
 - Start by fitting a simplified model for each LiDAR and environmental variable 
 - Compare the summaries of these models to find which variables have some influence on bat species presence
 - Select variables that have some influence on the bat species presence to create a more complex model. 
