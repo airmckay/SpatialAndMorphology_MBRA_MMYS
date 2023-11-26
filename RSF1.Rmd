@@ -273,7 +273,7 @@ mat.used <- dt1 %>%
 ## PCA
 ```{r}
 ## PCA 
-trait.pca <- rda(mat, scale = TRUE) # used and available points together 
+trait.pca <- rda(mat) # used and available points together 
 
 biplot(trait.pca) # simple plot 
 screeplot(trait.pca) # how much of each axis describes the variation in the data 
@@ -382,7 +382,7 @@ mat.mbra <- dt1 %>%
   gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
   ttops.n, ttops.mean.height, ttops.sd.height)) 
 
-trait.pca.mbra  <- rda(mat.mbra, scale = TRUE) 
+trait.pca.mbra  <- rda(mat.mbra) 
 # used and available points together 
 
 biplot(trait.pca.mbra) # simple plot 
@@ -416,7 +416,7 @@ mat.mmys <- dt1 %>%
   gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
   ttops.n, ttops.mean.height, ttops.sd.height)) 
 
-trait.pca.mmys  <- rda(mat.mmys, scale = TRUE) 
+trait.pca.mmys  <- rda(mat.mmys) 
 # used and available points together 
 
 biplot(trait.pca.mmys) # simple plot 
@@ -455,9 +455,13 @@ write.csv(traittable.mmys, file = file.path(output_today, "mmys_allpts_PCA1_2_ta
 
 ## Simple models - separated by bat species, no species interaction 
 
-dt2 <- as_tibble(dt1 %>% select(-geom)) # remove geom to convert back to a standard tibble 
-MBRA <- dt2 %>% filter(Species == "M.brandtii") %>% droplevels() # 7634 obs of 49 vars
-MMYS <- dt2 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of 49 vars
+
+# install.packages("lme4", type = "source") 
+# library(lme4)
+library(tidyverse)
+
+MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7633 obs of 49 vars
+MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of 49 vars
 
 ########################################################
 ########################  MBRA  ########################
@@ -465,6 +469,8 @@ MMYS <- dt2 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of
 # Hmax
 fit1MBRA= glmer(used ~  Hmax + (1|BatID), data=MBRA,
               family=binomial(link="logit"),nAGQ = 0) 
+
+
 # Hmean
 fit2MBRA = glmer(used ~ Hmean + (1|BatID), data=MBRA,
               family=binomial(link="logit"),nAGQ = 0) 
