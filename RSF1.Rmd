@@ -158,8 +158,8 @@ dt1df <- dt1df %>% select(-geom)
 # 16484 obs of 49 vars
 
 
-dt1df[dt1df$Hmax < 90, dt1df$Hmax]
-dt2df <- dt1df %>% filter(Hmax < 90)
+
+dt2df <- dt1df %>% dplyr::filter(Hmax < 90)
 # 16483 obs of 49 vars
 
 summary(dt2df)
@@ -207,18 +207,18 @@ dt1[,7:46]=scale(dt1[,7:46], scale=TRUE) #
 
 ## Correlation/collinearity between LiDAR variables 
 ```{r}
-names(dt1)
-dtc <- dt1 %>% dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height)) 
-
-windows()
-
-corrplot(cor(dtc))
+# names(dt1)
+# dtc <- dt1 %>% dplyr::select(c(
+#   Hmax, Hmean, Hsd, Hcv, Hskewness, 
+#   H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+#   D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+#   gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+#   gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+#   ttops.n, ttops.mean.height, ttops.sd.height)) 
+# 
+# windows()
+# 
+# corrplot(cor(dtc))
 ```
 
 
@@ -240,7 +240,7 @@ headings <- dt1$idvar
 names(dt1)
 
 dt2 <- dt1 %>% dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
+  Hmax, Hmean, Hsd, Hcv, Hskewness, Hkurt, 
   H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
   D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
   gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
@@ -256,16 +256,16 @@ summary(dt2)
 mat <- dt2 
 
 ### In case you want to do a PCA for only used points later 
-mat.used <- dt1 %>%
-  dplyr::filter(used == 1) %>% 
-  droplevels() %>% 
-  dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height)) 
+# mat.used <- dt1 %>%
+#   dplyr::filter(used == 1) %>% 
+#   droplevels() %>% 
+#   dplyr::select(c(
+#   Hmax, Hmean, Hsd, Hcv, Hskewness, 
+#   H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+#   D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+#   gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+#   gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+#   ttops.n, ttops.mean.height, ttops.sd.height)) 
 
 ```
 
@@ -286,6 +286,8 @@ trait.loadings <- as.data.frame(pca.summary$species) %>%
   mutate(trait = rownames(.))  
 head(trait.loadings)
 
+
+
 meta <- dt1 %>% dplyr::select(c(used, Species, idvar)) 
 # for now, do not include bat.id
 
@@ -294,10 +296,32 @@ rownames(meta) <- meta$idvar
 meta$gen.spe <- meta$idvar
 meta$used <- as.factor(meta$used)
 
-
 sp.scores <- as.data.frame(pca.summary$sites) %>% 
-  mutate(gen.spe = rownames(.)) %>% inner_join(meta) # now used data is there
+  mutate(gen.spe = rownames(.)) %>% inner_join(meta) 
+# now used data is there
 
+traittable <- trait.loadings  %>% 
+  dplyr::select(trait, PC1, PC2)
+#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 26.11.2023
+
+
+spdf <- left_join(sp.scores, dt1, by = "idvar")
+spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
+
+
+#corrplot(cor(dtc))
+cortab <- as.data.frame(cor(spdf1)) 
+
+windows()
+corrplot(cor(spdf1),
+         tl.col="black", tl.srt=45,  
+         type="lower", col=brewer.pal(n=5, name="Greys"))
+
+cortab1 <- cortab[1:2,]
+cortab2 <- t(cortab1)
+
+#write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
+# 28.11.2023
 
 ################################################################################
 ##### plotting 
@@ -361,95 +385,19 @@ pca.ggplot
 ```
 
 
-## Table of PCA for further informing variable selection 
-```{r}
-traittable <- trait.loadings  %>% 
-  dplyr::select(trait, PC1, PC2)
-#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 26.11.2023
+# Model selection (explortatory approach)
+We determined that the following covariates can be used to describe most of the variation in the LiDAR variables based on comparing the ordination of all LiDAR variables with PC1 and PC2, trait loadings and pearsons correlations coefficients between covariates and PC1:
 
-## Now create a similar table for MBRA and MMYS separately 
+H95
+gap.sum.area (3 and 5)
+gap.sd.area (3 and 5)
+D0
+Hsd
 
-## MBRA PCA 
+In addition we will include distance to water (dist.water) and bat ID as a random effect. 
 
-mat.mbra <- dt1 %>%
-  dplyr::filter(Species == "M.brandtii") %>% 
-  droplevels() %>% 
-  dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height)) 
+I begin by modelling for each bat species separately with two candidate models - one with gap varaibles at 3 m and another with gap variables at 5 m. 
 
-trait.pca.mbra  <- rda(mat.mbra) 
-# used and available points together 
-
-biplot(trait.pca.mbra) # simple plot 
-screeplot(trait.pca.mbra) 
-# how much of each axis describes the variation in the data 
-
-summary(trait.pca.mbra)
-
-pca.summary.mbra <- summary(trait.pca.mbra)
-
-trait.loadings.mbra <- as.data.frame(pca.summary.mbra$species) %>% 
-  mutate(trait = rownames(.))  
-head(trait.pca.mbra)
-
-
-traittable.mbra <- trait.loadings.mbra  %>% 
-  dplyr::select(trait, PC1, PC2)
-
-write.csv(traittable.mbra, file = file.path(output_today, "MBRA_allpts_PCA1_2_table.csv")) # 26.11.2023
-
-## MMYS PCA
-
-mat.mmys <- dt1 %>%
-  dplyr::filter(Species == "M.mystacinus") %>% 
-  droplevels() %>% 
-  dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height)) 
-
-trait.pca.mmys  <- rda(mat.mmys) 
-# used and available points together 
-
-biplot(trait.pca.mmys) # simple plot 
-screeplot(trait.pca.mmys) 
-# how much of each axis describes the variation in the data 
-
-summary(trait.pca.mmys)
-
-pca.summary.mmys <- summary(trait.pca.mmys)
-
-trait.loadings.mmys <- as.data.frame(pca.summary.mmys$species) %>% 
-  mutate(trait = rownames(.))  
-head(trait.pca.mmys)
-
-
-traittable.mmys <- trait.loadings.mmys  %>% 
-  dplyr::select(trait, PC1, PC2)
-
-write.csv(traittable.mmys, file = file.path(output_today, "mmys_allpts_PCA1_2_table.csv")) # 26.11.2023
-
-
-
-```
-
-
-
-
-
-# Model selection (explortatory approach with simplified models of each variable)
-- Start by fitting a simplified model for each LiDAR and environmental variable 
-- Compare the summaries of these models to find which variables have some influence on bat species presence
-- Select variables that have some influence on the bat species presence to create a more complex model. 
-- Use the drop1() function to create the least complex / most complex model. 
 
 ```{r}
 
