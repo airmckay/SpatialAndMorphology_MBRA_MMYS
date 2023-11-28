@@ -398,15 +398,13 @@ In addition we will include distance to water (dist.water) and bat ID as a rando
 
 I begin by modelling for each bat species separately with two candidate models - one with gap varaibles at 3 m and another with gap variables at 5 m. 
 
-
+## RSF
 ```{r}
 
 ## Simple models - separated by bat species, no species interaction 
-
-
 # install.packages("lme4", type = "source") 
 # library(lme4)
-library(tidyverse)
+
 
 MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7633 obs of 49 vars
 MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of 49 vars
@@ -414,546 +412,632 @@ MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of
 ########################################################
 ########################  MBRA  ########################
 ########################################################
-# Hmax
-fit1MBRA= glmer(used ~  Hmax + (1|BatID), data=MBRA,
+
+fit1MBRA= glmer(used ~  
+                  gap3.mean.area + gap3.sd.area +
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MBRA,
               family=binomial(link="logit"),nAGQ = 0) 
 
-
-# Hmean
-fit2MBRA = glmer(used ~ Hmean + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# Hsd 
-fit3MBRA = glmer(used ~ Hsd + (1|BatID), data=dt1,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# Hcv
-fit4MBRA = glmer(used ~ Hcv + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hkurt
-fit5MBRA = glmer(used ~ Hkurt + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hskewness
-fit6MBRA = glmer(used ~ Hskewness + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H10
-fit7MBRA = glmer(used ~ H10 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H20
-fit8MBRA = glmer(used ~ H20 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H30
-fit9MBRA = glmer(used ~ H30 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H40
-fit10MBRA = glmer(used ~ H40 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H50
-fit11MBRA = glmer(used ~ H50  + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H60
-fit12MBRA = glmer(used ~ H60 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H70
-fit13MBRA = glmer(used ~ H70 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H80
-fit14MBRA = glmer(used ~ H80 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-
-# H90
-fit15MBRA = glmer(used ~ H90 + (1|BatID), data=MBRA,
+fit2MBRA= glmer(used ~  
+                  gap5.mean.area + gap5.sd.area +
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MBRA,
               family=binomial(link="logit"),nAGQ = 0) 
 # boundary (singular) fit: see help('isSingular')
 
-# H95
-fit16MBRA = glmer(used ~ H95 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular')
-
-
-fit17MBRA = glmer(used ~ D0 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit18MBRA = glmer(used ~ D1 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit19MBRA = glmer(used ~ D2 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit20MBRA = glmer(used ~ D3 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit21MBRA = glmer(used ~ D4 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-
-fit22MBRA = glmer(used ~ D5 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-#boundary (singular) fit: see help('isSingular')
-
-fit23MBRA = glmer(used ~ D6 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit24MBRA = glmer(used ~ D7 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit25MBRA = glmer(used ~ D8 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit26MBRA = glmer(used ~ D9 + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit27MBRA = glmer(used ~ gap3.n + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit28MBRA = glmer(used ~ gap3.mean.area + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit29MBRA = glmer(used ~ gap3.sd.area + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit30MBRA = glmer(used ~ gap3.sum.area + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit31MBRA = glmer(used ~  gap5.n + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit32MBRA = glmer(used ~ gap5.mean.area + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit33MBRA = glmer(used ~ gap5.sd.area + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit34MBRA = glmer(used ~ gap5.sum.area + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit35MBRA = glmer(used ~ ttops.n + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit36MBRA = glmer(used ~ crown.mean.size + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit37MBRA = glmer(used ~ crown.sd.size + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit38MBRA = glmer(used ~ ttops.mean.height + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit39MBRA = glmer(used ~ ttops.sd.height + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit40MBRA = glmer(used ~ water.distance + (1|BatID), data=MBRA,
-              family=binomial(link="logit"),nAGQ = 0)
-
-# NOTE: 
-# error message "boundary (singular) fit: see help('isSingular')" interpretted as: 
-# Your model did fit, but it generated that warning because your random effects are very small. 
-
-################################################################################
-
+AIC(fit1MBRA, fit2MBRA)
+#          df      AIC
+# fit1MBRA  8 4367.075
+# fit2MBRA  8 4330.863
 
 ########################################################
 ########################  MMYS  ########################
 ########################################################
-# Hmax
-fit1MMYS= glmer(used ~  Hmax + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# Hmean
-fit2MMYS = glmer(used ~ Hmean + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
 
-# Hsd 
-fit3MMYS = glmer(used ~ Hsd + (1|BatID), data=dt1,
+fit1MMYS= glmer(used ~  
+                  gap3.mean.area + gap3.sd.area +
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MMYS,
               family=binomial(link="logit"),nAGQ = 0) 
 
-# Hcv
-fit4MMYS = glmer(used ~ Hcv + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hkurt
-fit5MMYS = glmer(used ~ Hkurt + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# Hskewness
-fit6MMYS = glmer(used ~ Hskewness + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H10
-fit7MMYS = glmer(used ~ H10 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H20
-fit8MMYS = glmer(used ~ H20 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H30
-fit9MMYS = glmer(used ~ H30 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H40
-fit10MMYS = glmer(used ~ H40 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular') 
-
-# H50
-fit11MMYS = glmer(used ~ H50  + (1|BatID), data=MMYS,
+fit2MMYS= glmer(used ~  
+                  gap5.mean.area + gap5.sd.area +
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MMYS,
               family=binomial(link="logit"),nAGQ = 0) 
 
-# H60
-fit12MMYS = glmer(used ~ H60 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
+AIC(fit1MMYS, fit2MMYS)
+#          df      AIC
+# fit1MMYS  8 5114.563
+# fit2MMYS  8 5114.292
 
-# H70
-fit13MMYS = glmer(used ~ H70 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
+################################################
+# The gap5 model for MBRA throws a singularity warning, and the AIC weights between the model pairs is very little so I will use the 3 m resolution models to continue. 
 
-# H80
-fit14MMYS = glmer(used ~ H80 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
+summary(fit1MBRA)
+# Generalized linear mixed model fit by maximum likelihood (Adaptive
+#   Gauss-Hermite Quadrature, nAGQ = 0) [glmerMod]
+#  Family: binomial  ( logit )
+# Formula: 
+# used ~ gap3.mean.area + gap3.sd.area + D0 + H95 + Hsd + water.distance +  
+#     (1 | BatID)
+#    Data: MBRA
+# 
+#      AIC      BIC   logLik deviance df.resid 
+#   4367.1   4422.6  -2175.5   4351.1     7625 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.8595 -0.3602 -0.2616 -0.1916  6.3952 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.003437 0.05863 
+# Number of obs: 7633, groups:  BatID, 10
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.41283    0.04967 -48.579  < 2e-16 ***
+# gap3.mean.area -0.29348    0.06880  -4.265 2.00e-05 ***
+# gap3.sd.area   -0.08817    0.04445  -1.984   0.0473 *  
+# D0             -0.32482    0.06326  -5.135 2.83e-07 ***
+# H95             0.74449    0.11199   6.648 2.97e-11 ***
+# Hsd            -0.22818    0.10099  -2.259   0.0239 *  
+# water.distance -0.44822    0.05015  -8.937  < 2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. gp3.s. D0     H95    Hsd   
+# gap3.mean.r  0.012                                   
+# gap3.sd.are -0.060  0.438                            
+# D0           0.108  0.518  0.456                     
+# H95         -0.161  0.300  0.119 -0.229              
+# Hsd          0.044 -0.122 -0.136  0.232 -0.878       
+# water.dstnc  0.189  0.255  0.207  0.005  0.019  0.051
 
-# H90
-fit15MMYS = glmer(used ~ H90 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular')
 
-# H95
-fit16MMYS = glmer(used ~ H95 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0) 
-# boundary (singular) fit: see help('isSingular')
+summary(fit1MMYS)
+# Generalized linear mixed model fit by maximum likelihood (Adaptive
+#   Gauss-Hermite Quadrature, nAGQ = 0) [glmerMod]
+#  Family: binomial  ( logit )
+# Formula: 
+# used ~ gap3.mean.area + gap3.sd.area + D0 + H95 + Hsd + water.distance +  
+#     (1 | BatID)
+#    Data: MMYS
+# 
+#      AIC      BIC   logLik deviance df.resid 
+#   5114.6   5171.3  -2549.3   5098.6     8842 
+# 
+# Scaled residuals: 
+#     Min      1Q  Median      3Q     Max 
+# -0.9268 -0.3587 -0.2780 -0.1950  9.3631 
+# 
+# Random effects:
+#  Groups Name        Variance Std.Dev.
+#  BatID  (Intercept) 0.02742  0.1656  
+# Number of obs: 8850, groups:  BatID, 11
+# 
+# Fixed effects:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.58026    0.07143 -36.124  < 2e-16 ***
+# gap3.mean.area  0.18598    0.07071   2.630 0.008533 ** 
+# gap3.sd.area    0.13158    0.04653   2.828 0.004686 ** 
+# D0              0.26618    0.06871   3.874 0.000107 ***
+# H95             0.66503    0.12364   5.379 7.49e-08 ***
+# Hsd             0.03934    0.09400   0.419 0.675573    
+# water.distance -0.48758    0.05212  -9.356  < 2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# Correlation of Fixed Effects:
+#             (Intr) gp3.m. gp3.s. D0     H95    Hsd   
+# gap3.mean.r  0.036                                   
+# gap3.sd.are  0.019  0.283                            
+# D0          -0.020  0.426  0.445                     
+# H95         -0.159  0.242 -0.009 -0.455              
+# Hsd          0.031 -0.028 -0.047  0.450 -0.849       
+# water.dstnc  0.231  0.141  0.074 -0.253  0.119 -0.065
 
-
-fit17MMYS = glmer(used ~ D0 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit18MMYS = glmer(used ~ D1 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit19MMYS = glmer(used ~ D2 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit20MMYS = glmer(used ~ D3 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit21MMYS = glmer(used ~ D4 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-
-fit22MMYS = glmer(used ~ D5 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-#boundary (singular) fit: see help('isSingular')
-
-fit23MMYS = glmer(used ~ D6 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit24MMYS = glmer(used ~ D7 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit25MMYS = glmer(used ~ D8 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit26MMYS = glmer(used ~ D9 + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit27MMYS = glmer(used ~ gap3.n + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit28MMYS = glmer(used ~ gap3.mean.area + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit29MMYS = glmer(used ~ gap3.sd.area + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit30MMYS = glmer(used ~ gap3.sum.area + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit31MMYS = glmer(used ~  gap5.n + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit32MMYS = glmer(used ~ gap5.mean.area + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit33MMYS = glmer(used ~ gap5.sd.area + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit34MMYS = glmer(used ~ gap5.sum.area + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular')
-
-fit35MMYS = glmer(used ~ ttops.n + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit36MMYS = glmer(used ~ crown.mean.size + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit37MMYS = glmer(used ~ crown.sd.size + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit38MMYS = glmer(used ~ ttops.mean.height + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit39MMYS = glmer(used ~ ttops.sd.height + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-# boundary (singular) fit: see help('isSingular') 
-
-fit40MMYS = glmer(used ~ water.distance + (1|BatID), data=MMYS,
-              family=binomial(link="logit"),nAGQ = 0)
-
+library(sjPlot)
+sjPlot::tab_model(fit1MBRA, fit1MMYS,fit2MBRA, fit2MMYS,
+                  dv.labels = c(
+                    "Myotis brandtii - 3 m", "Myotis mystacinus - 3 m",
+                    "Myotis brandtii - 5 m", "Myotis mystacinus - 5 m"), transform = NULL, auto.label = FALSE) 
 
 ```
 
+## Model diagnostics 
+fit1MBRA
+fit1MMYS
 
-# Summary tables
 ```{r}
 
-fitlist <- list(
-             fit1MBRA, fit1MMYS, fit2MBRA, fit2MMYS,
-             fit3MBRA, fit3MMYS, fit4MBRA, fit4MMYS,
-             fit5MBRA, fit5MMYS, fit6MBRA, fit6MMYS,
-             fit7MBRA, fit7MMYS, fit8MBRA, fit8MMYS,
-             fit9MBRA, fit9MMYS, fit10MBRA, fit10MMYS,
-             fit11MBRA, fit11MMYS,
-             fit12MBRA, fit12MMYS, fit13MBRA, fit13MMYS,
-             fit14MBRA, fit14MMYS, fit15MBRA, fit15MMYS,
-             fit16MBRA, fit16MMYS, fit17MBRA, fit17MMYS,
-             fit18MBRA, fit18MMYS, fit19MBRA, fit19MMYS,
-             fit20MBRA, fit20MMYS,
-             fit21MBRA, fit21MMYS, fit22MBRA, fit22MMYS,
-             fit23MBRA, fit23MMYS, fit24MBRA, fit24MMYS,
-             fit25MBRA, fit25MMYS, fit26MBRA, fit26MMYS,
-             fit27MBRA, fit27MMYS, fit28MBRA, fit28MMYS,
-             fit29MBRA, fit29MMYS, fit30MBRA, fit30MMYS,
-             fit31MBRA, fit31MMYS, fit32MBRA, fit32MMYS,
-             fit33MBRA, fit33MMYS, fit34MBRA, fit34MMYS,
-             fit35MBRA, fit35MMYS, fit36MBRA, fit36MMYS,
-             fit37MBRA, fit37MMYS, fit38MBRA, fit38MMYS,
-             fit39MBRA, fit39MMYS, fit40MBRA, fit40MMYS)
+### Diagnostics for fit1MBRA 
+simulationOutput <- simulateResiduals(fittedModel = fit1MBRA, plot = T)
+### Help with interpretation of residuals vs. predicted: 
+# https://stats.stackexchange.com/questions/449208/diagnostic-plot-residual-vs-predicted-of-a-glmm-using-dharma
+### recalculateResiduals()
 
-# Combine summary outputs to view them all at once 
-
-modelsums <- modelsummary(fitlist, statistic = 'p.value', output = "data.frame") 
-
-write.xlsx(modelsums, file = file.path(output_today, "allfits_bothspecies_models.xlsx")) 
-
-```
+# KS test -  the p-value shows you that there is *not* a significant deviation from the assumed distribution
+# Dispersion test – Not over or underdispersed
+# Outlier – No indication of outliers 
+# 
+# Residuals appear to more or less agree with predicted values 
 
 
-## Check correlation of fixed effects
-```{r}
-names(dt2)
-dt3 <- dt2 %>% dplyr::select(c(
-  Hmax, Hmean, Hsd, Hcv, Hskewness, 
-  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
-  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
-  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
-  ttops.n, ttops.mean.height, ttops.sd.height)) 
 
 windows()
-library(corrplot)
-corrplot(cor(dt3))
-
-
-
-library(performance)
-summary(fit1)
-print(fit1, correlation=TRUE) 
-
-check_model(fit1) 
-
-
-vc <- vcov(fit1)
-
-# diagonal matrix of standard deviations associated with vcov
-S <- sqrt(diag(diag(vc), nrow(vc), nrow(vc)))
-
-# convert vc to a correlation matrix
-solve(S) %*% vc %*% solve(S)
-
-
-testDispersion(fit1)
-
-simulationOutput <- simulateResiduals(fittedModel = fit1, plot = F)
-residuals(simulationOutput)
-
-residuals(simulationOutput, quantileFunction = qnorm, outlierValues = c(-7,7))
-
-plot(simulationOutput)
-
 testDispersion(simulationOutput)
+# 
+# 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
+# 	simulated
+# 
+# data:  simulationOutput
+# dispersion = 1.005, p-value = 0.888
+# alternative hypothesis: two.sided
 
-# testSpatialAutocorrelation(simulationOutput = simulationOutput, x = dt1$Easting, y= dt2$Northing) - this does not work 
+
+
+testZeroInflation(simulationOutput)
+# 	DHARMa zero-inflation test via comparison to expected zeros with simulation
+# 	under H0 = fitted model
+# 
+# data:  simulationOutput
+# ratioObsSim = 0.99996, p-value = 0.992
+# alternative hypothesis: two.sided
+
+testQuantiles(simulationOutput)
+# 	Test for location of quantiles via qgam
+# 
+# data:  simulationOutput
+# p-value = 0.08098
+# alternative hypothesis: both
+
+testCategorical(simulationOutput, catPred = MBRA$BatID)
+## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+
+levels(MMYS$BatID)
+
+
+
+##########################################################################
+
+### Diagnostics for fit1MMYS 
+simulationOutput <- simulateResiduals(fittedModel = fit1MMYS, plot = T)
+### Help with interpretation of residuals vs. predicted: 
+# https://stats.stackexchange.com/questions/449208/diagnostic-plot-residual-vs-predicted-of-a-glmm-using-dharma
+### recalculateResiduals()
+
+# KS test -  the p-value shows you that there is *not* a significant deviation from the assumed distribution
+# Dispersion test – Not over or underdispersed
+# Outlier – No indication of outliers 
+# 
+# Residuals appear to more or less agree with predicted values 
+
+
+
+windows()
+testDispersion(simulationOutput)
+# 
+# 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
+# 	simulated
+# 
+# data:  simulationOutput
+# dispersion = 1.005, p-value = 0.888
+# alternative hypothesis: two.sided
+# No evidence of dispersion 
+
+
+
+testZeroInflation(simulationOutput)
+# 	DHARMa zero-inflation test via comparison to expected zeros with simulation
+# 	under H0 = fitted model
+# 
+# data:  simulationOutput
+# ratioObsSim = 1.0025, p-value = 0.64
+# alternative hypothesis: two.sided
+
+testQuantiles(simulationOutput)
+# 	Test for location of quantiles via qgam
+# 
+# data:  simulationOutput
+# p-value = 0.0005186
+# alternative hypothesis: both
+
+
+
+testCategorical(simulationOutput, catPred = MMYS$BatID)
+## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+
 ```
 
 
 ## Sketch model fit for model  to understand what the model is telling us 
-
-Ran into issues with using the glm() function. From what I could read online troubleshooting this error may involve uninstalling and reinstalling R which I would like to avoid... 
 ```{r}
 ############################################################
 
 ##refitting model with GLM to sketch results
 
-fit.x <- glm(used ~ Species + hmax + D7 + 
-              gap3.sum.area +
-              gap5.mean.area +
-              gap5.n +
-              hmax*Species +
-              D7*Species +
-              gap3.sum.area*Species +
-              gap5.n*Species, family=binomial(), data=var1)
+fit1mbra <- glm(used ~ gap3.mean.area + gap3.sd.area +
+                  D0 + H95 + Hsd + water.distance,
+                  family=binomial(), data=MBRA)
 
-summary(fit.x)
+summary(fit1mbra)
+# Call:
+# glm(formula = used ~ gap3.mean.area + gap3.sd.area + D0 + H95 + 
+#     Hsd + water.distance, family = binomial(), data = MBRA)
+# 
 # Coefficients:
-#                                    Estimate Std. Error z value Pr(>|z|)    
-# (Intercept)                       -3.123896   0.177948 -17.555  < 2e-16 ***
-# SpeciesM.mystacinus               -0.471452   0.245765  -1.918 0.055072 .  
-# hmax                               0.064046   0.006310  10.150  < 2e-16 ***
-# D8                                -1.528826   0.339763  -4.500 6.81e-06 ***
-# gap3.sum.area                     -0.936956   0.149551  -6.265 3.73e-10 ***
-# gap5.mean.area                    -0.202879   0.058935  -3.442 0.000577 ***
-# ttops.n                           -0.012984   0.001790  -7.254 4.03e-13 ***
-# gap5.n                            -0.290077   0.087132  -3.329 0.000871 ***
-# D7                                 1.022709   0.358025   2.857 0.004283 ** 
-# SpeciesM.mystacinus:hmax           0.020468   0.009897   2.068 0.038627 *  
-# SpeciesM.mystacinus:D7             0.848583   0.142466   5.956 2.58e-09 ***
-# SpeciesM.mystacinus:gap3.sum.area  1.079950   0.168810   6.397 1.58e-10 ***
-# SpeciesM.mystacinus:gap5.n         0.418130   0.112878   3.704 0.000212 ***
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.40805    0.04526 -53.209  < 2e-16 ***
+# gap3.mean.area -0.30531    0.06786  -4.499 6.82e-06 ***
+# gap3.sd.area   -0.09343    0.04414  -2.116   0.0343 *  
+# D0             -0.32678    0.06311  -5.178 2.24e-07 ***
+# H95             0.74136    0.11152   6.648 2.98e-11 ***
+# Hsd            -0.23026    0.10086  -2.283   0.0224 *  
+# water.distance -0.44066    0.04958  -8.888  < 2e-16 ***
 # ---
 # Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 # 
 # (Dispersion parameter for binomial family taken to be 1)
 # 
-#     Null deviance: 10066.4  on 16521  degrees of freedom
-# Residual deviance:  9567.8  on 16509  degrees of freedom
-# AIC: 9593.8
+#     Null deviance: 4651.0  on 7632  degrees of freedom
+# Residual deviance: 4351.3  on 7626  degrees of freedom
+# AIC: 4365.3
+# 
+# Number of Fisher Scoring iterations: 5
+
+
+
+#----------------------------- gap3.mean
+##getting predicted use 
+range.gapmean <- range(MBRA$gap3.mean.area)
+range.gapmean
+# -0.7824953  1.5548690
+
+mbra.plotting_dfm <- expand.grid(
+  H95 = mean(MBRA$H95),
+  D0 = mean(MBRA$D0),
+  gap3.mean.area = seq(from = -0.7824953, to = 1.5548690, by = 0.3),
+  gap3.sd.area = mean(MBRA$gap3.sd.area),
+  Hsd = mean(MBRA$Hsd), 
+  water.distance = mean(MBRA$water.distance)) 
+
+
+mbra.plotting_dfm$preds <- plogis( predict(fit1mbra , newdata=mbra.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mbra.plotting_dfm, aes(x=gap3.mean.area, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by gap3.mean.area for Myots brandtii") + 
+  ggplot2::ylab("Predicted Use")
+
+
+
+#----------------------------- gap3.SD
+##getting predicted use 
+range.gapsd <- range(MBRA$gap3.sd.area)
+range.gapsd
+# -0.6537116  3.1228513
+
+mbra.plotting_dfm <- expand.grid(
+  H95 = mean(MBRA$H95),
+  D0 = mean(MBRA$D0),
+  gap3.mean.area = mean(MBRA$gap3.mean.area),
+  gap3.sd.area = seq(from = -0.6537116, to = 3.1228513, by = 0.3),
+  Hsd = mean(MBRA$Hsd), 
+  water.distance = mean(MBRA$water.distance)) 
+
+
+mbra.plotting_dfm$preds <- plogis( predict(fit1mbra , newdata=mbra.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mbra.plotting_dfm, aes(x=gap3.sd.area, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by gap3.sd.area for Myotis brandtii") + 
+  ggplot2::ylab("Predicted Use")
+
+#----------------------------- D0
+##getting predicted use 
+range.D0 <- range(MBRA$D0)
+range.D0
+# -1.059072  2.854221
+
+mbra.plotting_dfm <- expand.grid(
+  H95 = mean(MBRA$H95),
+  D0 = seq(from = -1.059072  , to = 3.293983, by = 0.3),
+  gap3.mean.area = mean(MBRA$gap3.mean.area),
+  gap3.sd.area = mean(MBRA$gap3.sd.area),
+  Hsd = mean(MBRA$Hsd), 
+  water.distance = mean(MBRA$water.distance)) 
+
+
+mbra.plotting_dfm$preds <- plogis( predict(fit1mbra , newdata=mbra.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mbra.plotting_dfm, aes(x=D0, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by D0 for Myotis brandtii") + 
+  ggplot2::ylab("Predicted Use")
+
+#----------------------------- Hsd
+##getting predicted use 
+range.Hsd <- range(MBRA$Hsd)
+range.Hsd
+# -2.125363  3.625778
+
+mbra.plotting_dfm <- expand.grid(
+  H95 = mean(MBRA$H95),
+  D0 = mean(MBRA$D0),
+  gap3.mean.area = mean(MBRA$gap3.mean.area),
+  gap3.sd.area = mean(MBRA$gap3.sd.area),
+  Hsd = seq(from = -2.125363  , to = 3.625778, by = 0.5), 
+  water.distance = mean(MBRA$water.distance)) 
+
+
+mbra.plotting_dfm$preds <- plogis( predict(fit1mbra , newdata=mbra.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mbra.plotting_dfm, aes(x=Hsd, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by Hsd for Myotis brandtii") + 
+  ggplot2::ylab("Predicted Use")
+
+#----------------------------- distance to water
+##getting predicted use 
+range.water.distance <- range(MBRA$water.distance)
+range.water.distance
+# -1.194830  3.878212
+
+mbra.plotting_dfm <- expand.grid(
+  H95 = mean(MBRA$H95),
+  D0 = mean(MBRA$D0),
+  gap3.mean.area = mean(MBRA$gap3.mean.area),
+  gap3.sd.area = mean(MBRA$gap3.sd.area),
+  Hsd = mean(MBRA$Hsd), 
+  water.distance = seq(from = -1.194830  , to = 3.878212, by = 0.3)) 
+
+
+mbra.plotting_dfm$preds <- plogis( predict(fit1mbra , newdata=mbra.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mbra.plotting_dfm, aes(x=water.distance, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by distance to water for Myotis brandtii") + 
+  ggplot2::ylab("Predicted Use")
+
+
+
+```
+
+
+
+
+
+
+```{r}
+######## MMYS ###########
+
+############################################################
+
+##refitting model with GLM to sketch results
+
+fit1mmys<- glm(used ~ gap3.mean.area + gap3.sd.area +
+                  D0 + H95 + Hsd + water.distance,
+                  family=binomial(), data=MMYS)
+
+summary(fit1mmys)
+# Call:
+# glm(formula = used ~ gap3.mean.area + gap3.sd.area + D0 + H95 + 
+#     Hsd + water.distance, family = binomial(), data = MMYS)
+# 
+# Coefficients:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)    -2.56789    0.04748 -54.078  < 2e-16 ***
+# gap3.mean.area  0.19242    0.06987   2.754 0.005889 ** 
+# gap3.sd.area    0.13277    0.04628   2.869 0.004120 ** 
+# D0              0.23425    0.06697   3.498 0.000469 ***
+# H95             0.64274    0.11774   5.459 4.79e-08 ***
+# Hsd             0.04368    0.09033   0.483 0.628755    
+# water.distance -0.45563    0.05110  -8.916  < 2e-16 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# (Dispersion parameter for binomial family taken to be 1)
+# 
+#     Null deviance: 5408.0  on 8849  degrees of freedom
+# Residual deviance: 5104.5  on 8843  degrees of freedom
+# AIC: 5118.5
 # 
 # Number of Fisher Scoring iterations: 6
 
 
 ##getting predicted use as a function of zmax, at average zq60 and zcv
-range.hmax <- range(var1$hmax)
-range.hmax
-#[1] 0.00 99.77
+range.h95 <- range(MMYS$H95)
+range.h95
+# -2.174677  2.221490
 
-plotting_dfm <- expand.grid(hmax = seq(from = 0, to = 99.7, by = 10),
-                            Species    = c("M.brandtii","M.mystacinus"),
-                            D7 = mean(var1$D7),
-                            gap3.sum.area = mean(var1$gap3.sum.area),
-                            gap3.mean.area = mean(var1$gap3.mean.area),
-                            gap5.mean.area = mean(var1$gap5.mean.area), 
-                            gap5.n = mean(var1$gap5.n))
+mmys.plotting_dfm <- expand.grid(
+  H95 = seq(from = -2.174677, to = 2.187593, by = 0.5),
+  D0 = mean(MMYS$D0),
+  gap3.sd.area = mean(MMYS$gap3.sd.area),
+  gap3.mean.area = mean(MMYS$gap3.mean.area),
+  Hsd = mean(MMYS$Hsd), 
+  water.distance = mean(MMYS$water.distance)) 
 
-plotting_dfm$Species = as.factor(plotting_dfm$Species)
 
-plotting_dfm$preds <- plogis( predict(fit.x , newdata=plotting_dfm))
+mmys.plotting_dfm$preds <- plogis( predict(fit1mmys , newdata=mmys.plotting_dfm))
 
  
 ##plotting the predicted response on the two covariates
 windows()
-pl <- ggplot(plotting_dfm, aes(x=hmax, y =preds, color=as.factor(Species)))
+pl <- ggplot(mmys.plotting_dfm, aes(x=H95, y =preds))
 pl + 
   geom_point() +
   geom_smooth() + 
-  ggtitle("Predicted Use by hmax and Species") + 
+  ggtitle("Predicted Use by H95 for Myotis mystacinus") + 
   ggplot2::ylab("Predicted Use")
 
 
-#----------------------------- gap5.n 
+#----------------------------- gap3.mean
+##getting predicted use 
+range.gapmean <- range(MMYS$gap3.mean.area)
+range.gapmean
+# -0.782728  1.554869
 
-##getting predicted use as a function of zq60, at average zmax and zcv
-range.gap5.n <- range(var1$gap5.n)
-range.gap5.n
-#[1] -0.6713285  5.7284651
-
-plotting_dfm <- expand.grid(gap5.n = seq(from = -0.67, to = 5.73, by = 0.2),
-                            Species    = c("M.brandtii","M.mystacinus"),
-                            D7 = mean(var1$D7),
-                            gap3.sum.area = mean(var1$gap3.sum.area),
-                            gap3.mean.area = mean(var1$gap3.mean.area),
-                            gap5.mean.area = mean(var1$gap5.mean.area), 
-                            hmax = mean(var1$hmax))
-
-plotting_dfm$Species = as.factor(plotting_dfm$Species)
-
-plotting_dfm$preds <- plogis( predict(fit.x , newdata=plotting_dfm))
+mmys.plotting_dfm <- expand.grid(
+  H95 = mean(MMYS$H95),
+  D0 = mean(MMYS$D0),
+  gap3.mean.area = seq(from = -0.782728, to = 1.554869, by = 0.3),
+  gap3.sd.area = mean(MMYS$gap3.sd.area),
+  Hsd = mean(MMYS$Hsd), 
+  water.distance = mean(MMYS$water.distance)) 
 
 
+mmys.plotting_dfm$preds <- plogis( predict(fit1mmys , newdata=mmys.plotting_dfm))
+
+ 
 ##plotting the predicted response on the two covariates
 windows()
-pl <- ggplot(plotting_dfm, aes(x=gap5.n, y =preds, color=as.factor(Species)))
+pl <- ggplot(mmys.plotting_dfm, aes(x=gap3.mean.area, y =preds))
 pl + 
-  geom_point( ) +
+  geom_point() +
   geom_smooth() + 
-  ggtitle("Predicted Use by gap5.n and Species") + 
+  ggtitle("Predicted Use by gap3.mean.area for Myots mystacinus") + 
   ggplot2::ylab("Predicted Use")
 
 
+#----------------------------- gap3.SD
+##getting predicted use 
+range.gapsd <- range(MMYS$gap3.sd.area)
+range.gapsd
+# -0.6537116  3.1268099
+
+mmys.plotting_dfm <- expand.grid(
+  H95 = mean(MMYS$H95),
+  D0 = mean(MMYS$D0),
+  gap3.mean.area = mean(MMYS$gap3.mean.area),
+  gap3.sd.area = seq(from = -0.6537116, to = 3.1268099, by = 0.3),
+  Hsd = mean(MMYS$Hsd), 
+  water.distance = mean(MMYS$water.distance)) 
 
 
+mmys.plotting_dfm$preds <- plogis( predict(fit1mmys , newdata=mmys.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mmys.plotting_dfm, aes(x=gap3.sd.area, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by gap3.sd.area for Myotis mystacinus") + 
+  ggplot2::ylab("Predicted Use")
 
 
+#----------------------------- D0
+##getting predicted use 
+range.D0 <- range(MMYS$D0)
+range.D0
+# -1.059072  2.854221
+
+mmys.plotting_dfm <- expand.grid(
+  H95 = mean(MMYS$H95),
+  D0 = seq(from = -1.059072, to = 2.854221, by = 0.3),
+  gap3.mean.area = mean(MMYS$gap3.mean.area),
+  gap3.sd.area = mean(MMYS$gap3.sd.area),
+  Hsd = mean(MMYS$Hsd), 
+  water.distance = mean(MMYS$water.distance)) 
+
+
+mmys.plotting_dfm$preds <- plogis( predict(fit1mmys , newdata=mmys.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mmys.plotting_dfm, aes(x=D0, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by D0 for Myotis mystacinus") + 
+  ggplot2::ylab("Predicted Use")
+
+#----------------------------- Hsd
+##getting predicted use 
+range.Hsd <- range(MMYS$Hsd)
+range.Hsd
+# -2.118514  2.845969
+
+mmys.plotting_dfm <- expand.grid(
+  H95 = mean(MMYS$H95),
+  D0 = mean(MMYS$D0),
+  gap3.mean.area = mean(MMYS$gap3.mean.area),
+  gap3.sd.area = mean(MMYS$gap3.sd.area),
+  Hsd = seq(from = -2.118514  , to = 2.845969, by = 0.3), 
+  water.distance = mean(MMYS$water.distance)) 
+
+
+mmys.plotting_dfm$preds <- plogis( predict(fit1mmys , newdata=mmys.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mmys.plotting_dfm, aes(x=Hsd, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by Hsd for Myotis mystacinus") + 
+  ggplot2::ylab("Predicted Use")
+
+
+#----------------------------- distance to water
+##getting predicted use 
+range.water.distance <- range(MMYS$water.distance)
+range.water.distance
+# -1.194830  3.682869
+
+mmys.plotting_dfm <- expand.grid(
+  H95 = mean(MMYS$H95),
+  D0 = mean(MMYS$D0),
+  gap3.mean.area = mean(MMYS$gap3.mean.area),
+  gap3.sd.area = mean(MMYS$gap3.sd.area),
+  Hsd = mean(MMYS$Hsd), 
+  water.distance = seq(from = -1.194830  , to = 3.682869, by = 0.3)) 
+
+
+mmys.plotting_dfm$preds <- plogis( predict(fit1mmys , newdata=mmys.plotting_dfm))
+
+ 
+##plotting the predicted response on the two covariates
+windows()
+pl <- ggplot(mmys.plotting_dfm, aes(x=water.distance, y =preds))
+pl + 
+  geom_point() +
+  geom_smooth() + 
+  ggtitle("Predicted Use by distance to water for Myotis mystacinus") + 
+  ggplot2::ylab("Predicted Use")
 
 
 ```
