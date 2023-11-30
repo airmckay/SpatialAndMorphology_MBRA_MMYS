@@ -2728,7 +2728,7 @@ batcolors <- c("#32a5ff", "#011f4b")
 BrandtsHR<-
   tm_shape(Amelia, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Amelia) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2737,7 +2737,7 @@ tm_shape(range95Amelia) +
   
   tm_shape(Dagny, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Dagny) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2746,7 +2746,7 @@ tm_shape(range95Dagny) +
 
   tm_shape(Kaja, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Kaja) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2755,7 +2755,7 @@ tm_shape(range95Kaja) +
 
   tm_shape(Maren, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Maren) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2764,7 +2764,7 @@ tm_shape(range95Maren) +
   
   tm_shape(Nora, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Nora) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2773,7 +2773,7 @@ tm_shape(range95Nora) +
   
   tm_shape(Phoebe, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Phoebe) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2782,7 +2782,7 @@ tm_shape(range95Phoebe) +
 
   tm_shape(Sofia, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Sofia) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2791,7 +2791,7 @@ tm_shape(range95Sofia) +
   
   tm_shape(Steffi, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Steffi) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2801,7 +2801,7 @@ tm_shape(range95Steffi) +
   
   tm_shape(Thea, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#32a5ff") +
 tm_shape(range95Thea) + 
   tm_borders(alpha=.7, col = "#32a5ff", lwd = 2) + 
@@ -2824,7 +2824,7 @@ BrandtsHR
 MystacinusHR <- 
   tm_shape(Amelia, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Amelia) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2834,7 +2834,7 @@ tm_shape(range95Amelia) +
   
   tm_shape(Aricia, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Aricia) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2844,7 +2844,7 @@ tm_shape(range95Aricia) +
   
   tm_shape(Daisy, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Daisy) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2853,7 +2853,7 @@ tm_shape(range95Daisy) +
 
   tm_shape(Ethel, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Ethel) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2863,7 +2863,7 @@ tm_shape(range95Ethel) +
   
   tm_shape(Ida, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Ida) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2873,7 +2873,7 @@ tm_shape(range95Ida) +
   
   tm_shape(Line, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Line) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2883,7 +2883,7 @@ tm_shape(range95Line) +
   
   tm_shape(Line, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Line) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2893,7 +2893,7 @@ tm_shape(range95Line) +
   
   tm_shape(Marie, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Marie) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2903,7 +2903,7 @@ tm_shape(range95Marie) +
   
   tm_shape(Ragnhild, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Ragnhild) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2913,7 +2913,7 @@ tm_shape(range95Ragnhild) +
   
   tm_shape(Reeda, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Reeda) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2923,7 +2923,7 @@ tm_shape(range95Reeda) +
   
   tm_shape(Stine, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Stine) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
@@ -2933,7 +2933,7 @@ tm_shape(range95Stine) +
   
   tm_shape(Turid, bbox = bound_box) + 
   tmap_mode('view') +
-  tm_basemap("Esri.WorldTopoMap") +
+  tm_basemap("CartoDB.Voyager") +
   tm_dots(col = "#011f4b") +
 tm_shape(range95Turid) + 
   tm_borders(alpha=.7, col = "#011f4b", lwd = 2) + 
