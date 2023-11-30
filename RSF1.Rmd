@@ -58,7 +58,6 @@ output_today
 dir.create(output_today)
 output_today
 
-
 ```
 
 
@@ -234,7 +233,8 @@ dt2 <- dt1 %>% dplyr::select(c(
   H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
   D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
   gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
-  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,
+  crown.mean.size, crown.sd.size, 
   ttops.n, ttops.mean.height, ttops.sd.height)) 
 ## Remove hskewness for now because it has negative values... 
 rownames(dt2) <- headings
@@ -521,8 +521,8 @@ simulationOutput <- simulateResiduals(fittedModel = fit1MBRA, plot = T)
 
 
 
-windows()
-testDispersion(simulationOutput)
+# windows()
+# testDispersion(simulationOutput)
 # 
 # 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
 # 	simulated
@@ -533,7 +533,7 @@ testDispersion(simulationOutput)
 
 
 
-testZeroInflation(simulationOutput)
+# testZeroInflation(simulationOutput)
 # 	DHARMa zero-inflation test via comparison to expected zeros with simulation
 # 	under H0 = fitted model
 # 
@@ -541,24 +541,24 @@ testZeroInflation(simulationOutput)
 # ratioObsSim = 0.99996, p-value = 0.992
 # alternative hypothesis: two.sided
 
-testQuantiles(simulationOutput)
+# testQuantiles(simulationOutput)
 # 	Test for location of quantiles via qgam
 # 
 # data:  simulationOutput
 # p-value = 0.08098
 # alternative hypothesis: both
 
-testCategorical(simulationOutput, catPred = MBRA$BatID)
+# testCategorical(simulationOutput, catPred = MBRA$BatID)
 ## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
 
-levels(MMYS$BatID)
+# levels(MMYS$BatID)
 
 
 
 ##########################################################################
 
 ### Diagnostics for fit1MMYS 
-simulationOutput <- simulateResiduals(fittedModel = fit1MMYS, plot = T)
+# simulationOutput <- simulateResiduals(fittedModel = fit1MMYS, plot = T)
 
 
 ### Help with interpretation of residuals vs. predicted: 
@@ -573,8 +573,8 @@ simulationOutput <- simulateResiduals(fittedModel = fit1MMYS, plot = T)
 
 
 
-windows()
-testDispersion(simulationOutput)
+# windows()
+# testDispersion(simulationOutput)
 # 
 # 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
 # 	simulated
@@ -586,7 +586,7 @@ testDispersion(simulationOutput)
 
 
 
-testZeroInflation(simulationOutput)
+# testZeroInflation(simulationOutput)
 # 	DHARMa zero-inflation test via comparison to expected zeros with simulation
 # 	under H0 = fitted model
 # 
@@ -594,7 +594,7 @@ testZeroInflation(simulationOutput)
 # ratioObsSim = 1.0025, p-value = 0.64
 # alternative hypothesis: two.sided
 
-testQuantiles(simulationOutput)
+# testQuantiles(simulationOutput)
 # 	Test for location of quantiles via qgam
 # 
 # data:  simulationOutput
@@ -603,7 +603,7 @@ testQuantiles(simulationOutput)
 
 
 
-testCategorical(simulationOutput, catPred = MMYS$BatID)
+# testCategorical(simulationOutput, catPred = MMYS$BatID)
 ## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
 
 ```
@@ -1085,7 +1085,8 @@ drop1(bigfit1)
 # Species:gap3.sd.area      1 9559.7
 # Species:D0                1 9601.4
 # Species:Hsd               1 9547.9
-# Species:water.distance    1 9545.9 *** # Suggests to drop water.distance*Species 
+# Species:water.distance    1 9545.9 *** 
+############ Suggests to drop water.distance*Species 
   
 bigfit2 =  glmer(used ~  Species + 
                    gap3.mean.area + gap3.sd.area +
@@ -1136,13 +1137,16 @@ drop1(bigfit2)
 # Species:D0                1 9599.5
 # Species:Hsd               1 9546.6
 
+
+```
+
 ## Make predictions from bigfit2
 
-## Multi pannel graph 
-# 4 LiDAR variables (x) 
-# Probability of use (y) 
-# Plot the predictions with two lines - one for each bat species 
-```
+### Multi pannel graph 
+### 4 LiDAR variables (x) 
+### Probability of use (y) 
+### Plot the predictions with two lines - one for each bat species 
+
 
 ## First, model diagnostics 
 ```{r}
@@ -1282,8 +1286,12 @@ pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
 ## Plot 
 p1 <- ggplot(pred, aes(gap3.mean.area, PP)) + 
   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = gap3.mean.area, ymin = LL, ymax = UL), alpha = 0.4) + 
+  geom_ribbon(aes(x = gap3.mean.area, ymin = LL, ymax = UL,
+              fill = factor(Species)), alpha = 0.4)  +
   facet_wrap(~Species) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
   theme_bw() +
   theme(strip.text = element_text(face = "italic"),
         legend.position="none") +
@@ -1291,8 +1299,9 @@ p1 <- ggplot(pred, aes(gap3.mean.area, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Scaled mean average area of gaps within 45 m of a location") +
-  ylab ("Predicted use")
+  xlab ("Mean average area of gaps within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  theme(text = element_text(size=20))
 
 p1
 
@@ -1320,8 +1329,12 @@ pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
 ## Plot 
 p2 <- ggplot(pred, aes(gap3.sd.area, PP)) + 
   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = gap3.sd.area, ymin = LL, ymax = UL), alpha = 0.4) + 
+  geom_ribbon(aes(x = gap3.sd.area, ymin = LL, ymax = UL, 
+              fill = factor(Species)), alpha = 0.4) +
   facet_wrap(~Species) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
   theme_bw() +
   theme(strip.text = element_text(face = "italic"),
         legend.position="none") +
@@ -1329,8 +1342,9 @@ p2 <- ggplot(pred, aes(gap3.sd.area, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Scaled standard deviation of area of gaps within 45 m of a location") +
-  ylab ("Predicted use")
+  xlab ("Standard deviation of area of gaps within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  theme(text = element_text(size=20))
 
 p2
 
@@ -1360,8 +1374,12 @@ pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
 ## Plot 
 p3 <- ggplot(pred, aes(D0, PP)) + 
   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = D0, ymin = LL, ymax = UL), alpha = 0.4) + 
+  geom_ribbon(aes(x = D0, ymin = LL, ymax = UL,
+                  fill = factor(Species)), alpha = 0.4) + 
   facet_wrap(~Species) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
   theme_bw() +
   theme(strip.text = element_text(face = "italic"),
         legend.position="none") +
@@ -1369,8 +1387,9 @@ p3 <- ggplot(pred, aes(D0, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Scaled canopy density within 45 m of a location") +
-  ylab ("Predicted use")
+  xlab ("Canopy density within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  theme(text = element_text(size=20))
 
 p3
 
@@ -1399,8 +1418,12 @@ pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
 ## Plot 
 p4 <- ggplot(pred, aes(Hsd, PP)) + 
   geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
-  geom_ribbon(aes(x = Hsd, ymin = LL, ymax = UL, fill = factor(Species)), alpha = 0.4) + 
+  geom_ribbon(aes(x = Hsd, ymin = LL, ymax = UL, 
+                  fill = factor(Species)), alpha = 0.4) + 
   facet_wrap(~Species) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
   theme_bw() +
   theme(strip.text = element_text(face = "italic"),
         legend.position="none") +
@@ -1408,14 +1431,65 @@ p4 <- ggplot(pred, aes(Hsd, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Scaled standard deviation of vegetation height within 45 m of a location") +
-  ylab ("Predicted use")
+  xlab ("Standard deviation of vegetation height within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  theme(text = element_text(size=20))
 
 p4
 
 library(cowplot)
 
-cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, labels = "auto") +
-  theme(text = element_text(size=20)) 
+cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, labels = c("a.", "b.", "c.", "d.")) +
+  theme(text = element_text(size=30)) 
 ```
+
+
+## Bit curious  about how a massive model of all the variables would behave in terms of R2 
+
+```{r}
+# 
+# bigfit.test = glmer(used ~  Species + 
+#                   gap3.mean.area + gap3.sd.area + 
+#                   gap3.n + gap3.sum.area +
+#                   gap5.mean.area + gap5.sd.area +
+#                   gap5.n + gap5.sum.area +
+#                   ttops.n + ttops.mean.height + ttops.sd.height +
+#                   D0 + D1 + D2 + D3 + D4 + 
+#                   D5 + D6 + D7 + D8 + D9 +
+#                   H10 + H20 + H30 + H40 +  H50 + H60 +
+#                   H70 + H80 + H90 + H95 +
+#                   Hsd + Hmax + Hmean + Hcv + Hskewness + Hkurt +
+#                   water.distance +
+#                   gap3.mean.area*Species + gap3.sd.area*Species + 
+#                   gap3.n*Species + gap3.sum.area*Species +
+#                   gap5.mean.area*Species + gap5.sd.area*Species +
+#                   gap5.n*Species + gap5.sum.area*Species +
+#                   ttops.n*Species + 
+#                   ttops.mean.height*Species + 
+#                   ttops.sd.height*Species +
+#                   D0*Species + D1*Species + D2*Species + 
+#                   D3*Species + D4*Species + D5*Species + 
+#                   D6*Species + D7*Species + 
+#                   D8*Species + D9*Species +
+#                   H10*Species + H20*Species + H30*Species + 
+#                   H40*Species +  H50*Species + H60*Species +
+#                   H70*Species + H80*Species + 
+#                   H90*Species + H95*Species +
+#                   Hsd*Species + Hmax*Species + Hmean*Species + 
+#                   Hcv*Species + Hskewness*Species + Hkurt*Species +
+#                   water.distance*Species +
+#                   (1|BatID), data=dt1,
+#               family=binomial(link="logit"),nAGQ = 0)
+# 
+# sumbig <- summary(bigfit.test)$r.squared # Cannot get the R2 for this model 
+# print(bigfit.test, correlation=TRUE)
+# bigfit.test
+# 
+# library(MuMIn)
+# r.squaredGLMM(bigfit.test)
+
+
+
+```
+
 
