@@ -159,36 +159,66 @@ dt1[,7:46]=scale(dt1[,7:46], scale=TRUE) #
 
 ## Data exploration - raw data (unscaled)
 ```{r}
-# summary(dt2df)
-# 
-# ## Are there any strong outliers amongst n of local maxima? 
-# hist(dt2df$ttops.n) 
-# 
-# # How does this look for used points? 
-# dt2dfused <- dt2df %>% filter(used == 1)
-# hist(dt2dfused$ttops.n) 
-# # what proportion of the dataset has a ttops.n value of less than 5? 
-#  
-# openareas <- dt2df %>% filter(ttops.n <= 5)
-# # 2377 obs 
-# 2377/16483
-# # 14%
-# # How many of these open area observations are actual used points? 
-# 
-# summary(openareas)
-# table(openareas$used) # 17 points 
-#  
-# openused <- openareas %>% filter(used == 1 ) %>%  droplevels()
-# 
-# summary(openused)
-# table(openused$Species)
-#   # M.brandtii M.mystacinus 
-#   #          8            9 
-# table(openused$BatID)
-# # Amelia  Dagny  Ethel Louise Phoebe  Reeda Steffi  Stine   Thea 
-# #      2      1      2      2      5      1      1      2      1 
-# 
-# ### Think of a way to more distinctly categorize "open areas". 
+summary(dt2df)
+
+## Are there any strong outliers amongst n of local maxima?
+hist(dt2df$ttops.n)
+
+# How does this look for used points?
+dt2dfused <- dt2df %>% filter(used == 1)
+hist(dt2dfused$ttops.n)
+# what proportion of the dataset has a ttops.n value of less than 5?
+
+openareas <- dt2df %>% filter(ttops.n <= 100)
+# 8339 obs
+8339/16483
+
+## If I use 5 trees as the cut off then we get 
+# 14%
+
+## If I use 100 trees, then I get 50% (for all points)
+# How many of these open area observations are actual used points?
+
+openareasused <- dt2dfused %>% filter(ttops.n <= 100)
+# 715 
+715/1502
+# Also about 50% 
+
+openareasused <- dt2dfused %>% filter(ttops.n <= 50)
+# 428 
+428/1502
+# 28% 
+
+table(openareasused$Species)
+#  M.brandtii M.mystacinus 
+#         237          191 
+
+openareasused <- dt2dfused %>% filter(ttops.n <= 100)
+# 428 
+428/1502
+# 28% 
+
+table(openareasused$Species)
+#  M.brandtii M.mystacinus 
+#         237          191 
+
+table(openareasused$BatID)
+
+
+summary(openareas)
+table(openareas$used) # 17 points
+
+openused <- openareas %>% filter(used == 1 ) %>%  droplevels()
+
+summary(openused)
+table(openused$Species)
+  # M.brandtii M.mystacinus
+  #          8            9
+table(openused$BatID)
+# Amelia  Dagny  Ethel Louise Phoebe  Reeda Steffi  Stine   Thea
+#      2      1      2      2      5      1      1      2      1
+
+### Think of a way to more distinctly categorize "open areas".
 
 ```
 
@@ -251,6 +281,7 @@ mat <- dt2
 ## Principal component analysis 
 Resources: 
 https://www.flutterbys.com.au/stats/tut/tut14.2.html
+https://rstudio-pubs-static.s3.amazonaws.com/259028_dbe846c67e144065b4c2bcd012fb130d.html 
 
 ```{r}
 ## PCA 
@@ -296,7 +327,7 @@ spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, u
 #corrplot(cor(dtc))
 cortab <- as.data.frame(cor(spdf1)) 
 
-windows()
+#windows()
 corrplot(cor(spdf1),
          tl.col="black", tl.srt=45,  
          type="lower", col=brewer.pal(n=5, name="Greys"))
@@ -313,7 +344,7 @@ cortab2 <- t(cortab1) # Table of the values for further comparing
 
 ## PC1 and PC2
 pca.ggplot <- ggplot(data = sp.scores, aes(x = PC1, y = PC2)) +
-  geom_point() +
+  geom_point(color = "gray", alpha = 0.9) +
   geom_segment(data = trait.loadings, 
                aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + 
   geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + 
