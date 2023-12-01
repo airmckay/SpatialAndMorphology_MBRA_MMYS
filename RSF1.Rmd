@@ -157,6 +157,64 @@ dt1[,7:46]=scale(dt1[,7:46], scale=TRUE) #
 
 ```
 
+## Compare home ranges
+
+"A Mann-Whitney U test (sometimes called the Wilcoxon rank-sum test) is used to compare the differences between two independent samples when the sample distributions are not normally distributed and the sample sizes are small (n <30).
+
+It is considered to be the nonparametric equivalent to the two-sample independent t-test." 
+# https://www.statology.org/mann-whitney-u-test-r/ 
+
+```{r}
+HR <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/HomerangeOverview.xlsx", 
+     col_types = c("text", "text", "text", 
+         "numeric", "text", "numeric", "numeric", 
+         "text", "numeric", "numeric"))
+
+HR$Species <- as.factor(HR$Species)
+HR$BatID <- as.factor(HR$BatID)
+
+mbrahr <- HR %>% 
+  filter(Species == "M.brandtii") %>% 
+  droplevels() %>% 
+  select(HRarea) 
+# mbrahr <- mbrahr$HRarea
+
+mmyshr <- HR %>% 
+  filter(Species == "M.mystacinus") %>% 
+  droplevels() %>% 
+  select(HRarea) 
+# mmyshr <- mmyshr$HRarea
+# 
+# wilcox.test(mbrahr, mmyshr)
+
+summary(mbrahr)
+ # Min.   : 0.110  
+ # 1st Qu.: 1.600  
+ # Median : 1.940  
+ # Mean   : 3.999  
+ # 3rd Qu.: 5.230  
+ # Max.   :12.740  
+
+summary(mmyshr)
+ # Min.   :0.0800  
+ # 1st Qu.:0.3675  
+ # Median :0.5150  
+ # Mean   :0.7175  
+ # 3rd Qu.:1.0975  
+ # Max.   :1.8700  
+
+# 	Wilcoxon rank sum exact test
+# 
+# data:  mbrahr and mmyshr
+# W = 92, p-value = 0.00562
+# alternative hypothesis: true location shift is not equal to 0
+
+# There is strong evidence that the home range size between the two species is distinct from each other. 
+
+```
+
+
+
 ## Data exploration - raw data (unscaled)
 ```{r}
 summary(dt2df)
@@ -193,15 +251,6 @@ table(openareasused$Species)
 #  M.brandtii M.mystacinus 
 #         237          191 
 
-openareasused <- dt2dfused %>% filter(ttops.n <= 100)
-# 428 
-428/1502
-# 28% 
-
-table(openareasused$Species)
-#  M.brandtii M.mystacinus 
-#         237          191 
-
 table(openareasused$BatID)
 
 
@@ -219,6 +268,112 @@ table(openused$BatID)
 #      2      1      2      2      5      1      1      2      1
 
 ### Think of a way to more distinctly categorize "open areas".
+
+ggplot(dt2df, aes(x = ttops.n, y = gap3.mean.area)) + 
+  geom_point(color = "gray", alpha = 0.7) + geom_smooth(color = "black") + theme_bw()
+  
+## Exploring mbra used only 
+mbraused <- dt2df %>% 
+  dplyr::filter(Species == "M.brandtii", 
+                                    used == 1) %>% 
+  droplevels() #694 obs 
+
+summary(mbraused$ttops.n)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   #  0.0    31.0    82.0   102.1   129.0   447.0  
+
+summary(mbraused$ttops.mean.height)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 0.00   13.31   16.17   16.30   19.08   31.58 
+
+## Most used points are in forests (vegetation more than 13 m tall) where there are at least 31 trees (sparse forest) 
+
+## Exploring mmys used only 
+mmysused <- dt2df %>% 
+  dplyr::filter(Species == "M.mystacinus", 
+                                    used == 1) %>% 
+  droplevels() #808 obs 
+
+summary(mmysused$ttops.n)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   #  0.0    56.0   179.0   170.9   258.2   455.0  
+
+summary(mmysused$ttops.mean.height)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 0.00   14.78   17.05   16.80   20.01   25.22 
+
+## Most used points are in forests (vegetation more than 13 m tall) where there are at least 31 trees (sparse forest) 
+
+ggplot(dt2dfused, aes(x = ttops.n, y = gap3.mean.area)) + 
+  geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
+  facet_wrap(~Species)
+
+## Back to all point but look at everything below ttops.n = 100
+ggplot(dt2df, aes(x = ttops.n, y = gap3.mean.area)) + 
+  geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") + xlim(c(0,175))
+
+## How many locations where the bats are foraging have less than 25 trees and an average gap area over 5500?
+
+dfopen1 <- dt2dfused %>% filter(ttops.n <75,
+                                gap3.mean.area > 5500) 
+# table(dfopen1$Species)
+#   M.brandtii M.mystacinus 
+#          150          109 
+
+# If we use these metrics to define "open areas" then there is very little difference between the bats and not many positions in these locations. 
+
+# Does the relationship look very different for gap5. variables?
+
+ggplot(dt2df, aes(x = ttops.n, y = gap5.mean.area)) + 
+  geom_point(color = "darkturquoise", alpha = 0.7) + geom_smooth(color = "black") 
+
+
+ggplot(dt2df, aes(x = ttops.n, y = gap5.mean.area)) + 
+  geom_point(color = "darkturquoise", alpha = 0.7) + geom_smooth(color = "black") + xlim(c(0,175))
+
+dfopen2 <- dt2dfused %>% filter(ttops.n <75,
+                                gap5.mean.area > 5500) 
+table(dfopen2$Species)
+  # M.brandtii M.mystacinus 
+  #        155          139 
+
+## Similar results at the 5 m resolution 
+
+batcolors = c("#32A5FF", "#011f4b") 
+
+## ttops.n
+ggplot(dt2dfused) + geom_count(
+  aes(x = ttops.n, y = Species, color = Species)) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  theme_bw()
+
+ggplot(dt2dfused) + geom_density(
+  aes(x = ttops.n, fill = factor(Species)), alpha = 0.5) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  theme_bw()
+
+ggplot(dt2dfused) + geom_count(
+  aes(x = ttops.n, y = Species, color = Species)) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  theme_bw()
+
+## gap3.mean.area
+ggplot(dt2dfused) + geom_density(
+  aes(x = gap3.mean.area, fill = factor(Species)), alpha = 0.5) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  theme_bw()
 
 ```
 
@@ -1330,8 +1485,8 @@ p1 <- ggplot(pred, aes(gap3.mean.area, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Mean average area of gaps within 45 m of a location") +
-  ylab ("Predicted probability of use") +
+  xlab ("gap3.mean.area") +
+  ylab ("Probability of use") +
   theme(text = element_text(size=20))
 
 p1
@@ -1373,8 +1528,8 @@ p2 <- ggplot(pred, aes(gap3.sd.area, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Standard deviation of area of gaps within 45 m of a location") +
-  ylab ("Predicted probability of use") +
+  xlab ("gap3.sd.area") +
+  ylab ("Probability of use") +
   theme(text = element_text(size=20))
 
 p2
@@ -1418,8 +1573,8 @@ p3 <- ggplot(pred, aes(D0, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Canopy density within 45 m of a location") +
-  ylab ("Predicted probability of use") +
+  xlab ("D0") +
+  ylab ("Probability of use") +
   theme(text = element_text(size=20))
 
 p3
@@ -1462,8 +1617,8 @@ p4 <- ggplot(pred, aes(Hsd, PP)) +
                         batcolors,  
                       aesthetics = c("fill", "colour"), 
                       name = "Bat species") + 
-  xlab ("Standard deviation of vegetation height within 45 m of a location") +
-  ylab ("Predicted probability of use") +
+  xlab ("Hsd") +
+  ylab ("Probability of use") +
   theme(text = element_text(size=20))
 
 p4
