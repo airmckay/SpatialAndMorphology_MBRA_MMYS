@@ -1,0 +1,801 @@
+---
+title: "RSF_50mRadius"
+output: html_document
+date: "2023-12-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+### Prepare the work space
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(beepr)
+library(lubridate)
+library(ResourceSelection)
+library(RColorBrewer)
+library(cowplot)
+library(colorBlindness)
+library(kableExtra)
+library(lme4)
+library(stats)
+library(DHARMa)
+library(lattice)
+library(broom)
+library(modelsummary)
+library(kableExtra)
+library(gt)
+library(readxl)
+library(xlsx)
+library(corrplot)
+library(vegan)
+
+getwd()
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/Documents/1. PhD_Main/GitHub_link/Nittedal/SpatialAndMorphology_MBRA_MMYS"
+
+output <- "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs"
+
+file.name <- "RSF_50mRadius"
+
+todays_date <- Sys.Date()
+ 
+dir.name <- str_c(output,"/", file.name, "_", todays_date)
+dir.name
+ 
+output_today <- dir.name
+output_today
+
+dir.create(output_today)
+output_today
+# "C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/RSF_50mRadius_2023-12-22"
+
+```
+
+
+```{r}
+## Covariates from LiDAR data prepared by Hans Ole 
+vars <- readRDS("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/SpatialData/231220_vars_dist50_v4_na-rm.rds")
+
+#Used and available positions - just for referencing. 
+# rsf.data <- read_csv("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Outputs/HomeRangeExploration_2023-09-28/used_available_pts_combined95KE.csv", 
+#      col_types = cols(...1 = col_skip()))
+
+summary(vars)
+str(vars) # sf data frame
+# 16522 observations of 47 variables 
+
+names(vars)
+# [1] "BatID"             "Easting"           "Northing"          "used"              "Species"          
+#  [6] "UTM"               "Hmax"              "Hmean"             "Hsd"               "Hcv"              
+# [11] "Hkurt"             "Hskewness"         "H10"               "H20"               "H30"              
+# [16] "H40"               "H50"               "H60"               "H70"               "H80"              
+# [21] "H90"               "H95"               "D0"                "D1"                "D2"               
+# [26] "D3"                "D4"                "D5"                "D6"                "D7"               
+# [31] "D8"                "D9"                "gap3.n"            "gap3.mean.area"    "gap3.sd.area"     
+# [36] "gap3.sum.area"     "gap5.n"            "gap5.mean.area"    "gap5.sd.area"      "gap5.sum.area"    
+# [41] "ttops.n"           "crown.mean.size"   "crown.sd.size"     "ttops.mean.height" "ttops.sd.height"  
+# [46] "water.distance"    "water.objtype"     "YOD"               "DIST"              "geom"           
+
+## For writing descriptions of each variable 
+
+#mettext <- as.data.frame(names(vars))
+# write.csv(mettext, "~mettext.csv") # 15.11.2023
+
+## First convert to a normal dataframe(drop geoms/sf objects) 
+dt <- vars
+
+dt1df <- as.data.frame(dt)
+dt1df <- dt1df %>% select(-geom)
+# 16522 obs of 49 vars
+
+summary(dt1df)
+
+## There is an -Inf value for Hmax which can be corrrected like this: 
+dt1df$Hmax <- gsub("-Inf", "0.5", dt1df$Hmax)
+dt1df$Hmax <- as.numeric(dt1df$Hmax)
+summary(dt1df)
+
+
+
+
+dt2df <- dt1df 
+# 16522 obs of 49 vars
+
+## Are there any strong outliers amongst n of local maxima? 
+hist(dt2df$ttops.n) 
+
+# How does this look for used points? 
+dt2dfused <- dt2df %>% filter(used == 1)
+hist(dt2dfused$ttops.n) 
+# what proportion of the dataset has a ttops.n value of less than 5? 
+ 
+openareas <- dt2df %>% filter(ttops.n <= 5)
+# 3548 obs 
+3548/16483
+# 21.5%
+
+# How many of these open area observations are actual used points? 
+summary(openareas)
+table(openareas$used) # 105 points 
+ 
+openused <- openareas %>% filter(used == 1 ) %>%  droplevels()
+
+summary(openused)
+table(openused$Species)
+  # M.brandtii M.mystacinus 
+  #          69            36 
+table(openused$BatID)
+# Amelia Astrid  Dagny  Daisy  Ethel   Kaja Louise  Maren   Nora 
+#     11      1     34      2      6      6     10      1      2 
+# Phoebe  Reeda  Sofia Steffi  Stine   Thea 
+#      5      1     10      8      6      2
+
+
+### Think of a way to more distinctly categorize "open areas". 
+ggplot(dt2df, aes(x = ttops.n, y = gap3.mean.area)) + 
+  geom_point(color = "gray", alpha = 0.7) + geom_smooth(color = "black") + theme_bw()
+  
+## Exploring mbra used only 
+mbraused <- dt2df %>% 
+  dplyr::filter(Species == "M.brandtii", 
+                                    used == 1) %>% 
+  droplevels() #694 obs 
+
+summary(mbraused$ttops.n)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 0.00   18.00   42.50   54.23   64.00  203.00 
+
+summary(mbraused$ttops.mean.height)
+  # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  #  0.00   14.58   18.18   17.37   20.40   32.79 
+
+## Most used points are in forests (tallest vegetation more than 14 m tall) where there are at least 18 trees (sparse forest) 
+
+
+## Exploring mmys used only 
+mmysused <- dt2df %>% 
+  dplyr::filter(Species == "M.mystacinus", 
+                                    used == 1) %>% 
+  droplevels() #808 obs 
+
+summary(mmysused$ttops.n)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   #  0.0    26.0    95.0    87.1   133.0   217.0
+
+summary(mmysused$ttops.mean.height)
+   # Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   # 0.00   16.57   18.48   18.26   20.94   26.00 
+
+## Most used points are in forests (tallest vegetation more than 16 m tall) where there are at least 26 trees (sparse forest) 
+
+ggplot(dt2dfused, aes(x = ttops.n, y = gap3.mean.area)) + 
+  geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") +
+  facet_wrap(~Species)
+
+## Back to all point but look at everything below ttops.n = 175
+ggplot(dt2df, aes(x = ttops.n, y = gap3.mean.area)) + 
+  geom_point(color = "orange", alpha = 0.7) + geom_smooth(color = "black") + xlim(c(0,175))
+
+## How many locations where the bats are foraging have less than 25 trees and an average gap area over 5500?
+dfopen1 <- dt2dfused %>% filter(ttops.n <50,
+                                gap3.mean.area > 5000) # 494 obs 
+table(dfopen1$Species)
+#   M.brandtii M.mystacinus 
+#          295     199 
+
+# If we use these metrics to define "open areas" then there is very little difference between the bats and not many positions in these locations. 
+# Does the relationship look very different for gap5. variables?
+
+ggplot(dt2df, aes(x = ttops.n, y = gap5.mean.area)) + 
+  geom_point(color = "darkturquoise", alpha = 0.7) + geom_smooth(color = "black") 
+ggplot(dt2df, aes(x = ttops.n, y = gap5.mean.area)) + 
+  geom_point(color = "darkturquoise", alpha = 0.7) + geom_smooth(color = "black") + xlim(c(0,175))
+dfopen2 <- dt2dfused %>% filter(ttops.n <75,
+                                gap5.mean.area > 5500) 
+table(dfopen2$Species)
+  # M.brandtii M.mystacinus 
+  #        333          221 
+
+## Similar results at the 5 m resolution 
+batcolors = c("#32A5FF", "#011f4b") 
+
+
+## ttops.n
+ggplot(dt2dfused) + geom_count(
+  aes(x = ttops.n, y = Species, color = Species)) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") +  theme_bw()
+
+
+ggplot(dt2dfused) + geom_density(
+  aes(x = ttops.n, fill = factor(Species)), alpha = 0.5) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + theme_bw()
+
+
+## gap3.mean.area
+ggplot(dt2dfused) + geom_density(
+  aes(x = gap3.mean.area, fill = factor(Species)), alpha = 0.5) +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  theme_bw()
+
+
+#### Scale continuous variables for ordination and modelling
+dt1 <- dt2df # Use this to scale all continuous numerical data 
+dt1[,7:46]=scale(dt1[,7:46], scale=TRUE) #
+#
+# names(dt1)
+```
+
+
+## Correlation/collinearity between LiDAR variables 
+```{r}
+names(dt1)
+dtc <- dt1 %>% dplyr::select(c(
+  Hmax, Hmean, Hsd, Hcv, Hskewness, 
+  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+  ttops.n, ttops.mean.height, ttops.sd.height)) 
+
+windows()
+
+corrplot(cor(dtc))
+```
+
+
+# PCA ordination of available points to address collinearity and discern patterns in how variables influence each other 
+
+
+### Prepare data for PCA 
+```{r}
+
+## Create an ID column so the bat meta data can be reattached later
+
+## Create a unique row id which will become "idvar"
+
+dt1$idvar <- paste0("ID-", 1:nrow(dt1)) 
+headings <- dt1$idvar
+
+## Now only includeLiDAR variables with IDvar
+names(dt1)
+
+dt2 <- dt1 %>% dplyr::select(c(
+  Hmax, Hmean, Hsd, Hcv, Hskewness, Hkurt, 
+  H10, H20, H30, H40,  H50, H60, H70, H80, H90, H95, 
+  D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, 
+  gap3.n, gap3.mean.area,  gap3.sd.area,  gap3.sum.area,  
+  gap5.n, gap5.mean.area,  gap5.sd.area,  gap5.sum.area,  
+  ttops.n, ttops.mean.height, ttops.sd.height,
+  crown.mean.size, crown.sd.size)) 
+
+rownames(dt2) <- headings
+# Reshape into wide format 
+
+summary(dt2)
+## This is a PCA, more info below: 
+
+mat <- dt2 
+
+```
+
+## PCA
+```{r}
+
+## PCA 
+trait.pca <- rda(mat) # used and available points together 
+biplot(trait.pca) 
+# simple plot 
+screeplot(trait.pca) 
+# how much of each axis describes the variation in the data 
+# PC1 Explains most of the variation. Big difference between PC2 and PC3. 
+summary(trait.pca)
+pca.summary <- summary(trait.pca)
+## In our case, 'species' are the different LiDAR variables and sites are the different bat locations. 
+trait.loadings <- as.data.frame(pca.summary$species) %>% 
+  mutate(trait = rownames(.))  
+head(trait.loadings)
+meta <- dt1 %>% dplyr::select(c(used, Species, idvar)) 
+# for now, do not include bat.id
+## Build meta data to be reattached in plotting
+rownames(meta) <- meta$idvar
+meta$gen.spe <- meta$idvar
+meta$used <- as.factor(meta$used)
+# Scores for all the different bat locations 
+sp.scores <- as.data.frame(pca.summary$sites) %>% 
+  mutate(gen.spe = rownames(.)) %>% inner_join(meta) 
+# 
+traittable <- trait.loadings  %>% 
+  dplyr::select(trait, PC1, PC2)
+#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 22.12.2023
+
+### Compare trait loadings for bat locations with Pearson's correlation of PC1 and PC2, as well as of the LiDAR variables with each other 
+spdf <- left_join(sp.scores, dt1, by = "idvar")
+spdf1 <- spdf %>% dplyr::select(-c(PC3, PC4, PC5, PC6, idvar, gen.spe, used.x, used.y, Species.x, Species.y, BatID, Easting, Northing, UTM, YOD, DIST, water.distance, water.objtype))
+#corrplot(cor(dtc))
+cortab <- as.data.frame(cor(spdf1)) 
+#windows()
+corrplot(cor(spdf1),
+         tl.col="black", tl.srt=45,  
+         type="lower", col=brewer.pal(n=5, name="Greys"))
+cortab1 <- cortab[1:2,]
+cortab2 <- t(cortab1) # Table of the values for further comparing 
+#write.csv(cortab2, file = file.path(output_today, "cortab2.csv"))
+# 22.12.2023
+
+################################################################################
+##### plotting 
+################################################################################
+
+## PC1 and PC2
+pca.ggplot <- ggplot(data = sp.scores, aes(x = PC1, y = PC2)) +
+  geom_point() +
+  geom_segment(data = trait.loadings, 
+               aes(x = 0, xend = PC1/2, y = 0, yend = PC2/2), lwd = 0.1) + # this is a new geom that allows you to draw segments like the ones for the loadings above
+  geom_text(data = trait.loadings, aes(x = PC1/2, y = PC2/2+0.1, label = trait), size = 3) + # this adds text to the labels
+  theme_bw() 
+pca.ggplot
+
+
+## Table of PCA for further informing variable selection 
+traittable <- trait.loadings  %>% 
+  dplyr::select(trait, PC1, PC2)
+#write.csv(traittable, file = file.path(output_today, "bothbats_allpts_PCA1_2_table.csv")) # 26.11.2023
+
+## Now create a similar table for MBRA and MMYS separately 
+
+
+```
+
+
+
+
+## RSF
+```{r}
+## Simple models - separated by bat species, no species interaction 
+# install.packages("lme4", type = "source") 
+# library(lme4)
+MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7633 obs of 49 vars
+MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of 49 vars
+########################################################
+########################  MBRA  ########################
+########################################################
+fit1MBRA= glmer(used ~  
+                  gap3.mean.area + 
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MBRA,
+              family=binomial(link="logit"),nAGQ = 0) 
+fit2MBRA= glmer(used ~  
+                  gap5.mean.area + 
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MBRA,
+              family=binomial(link="logit"),nAGQ = 0) 
+# boundary (singular) fit: see help('isSingular')
+isSingular(fit1MBRA)
+# FALSE
+isSingular(fit2MBRA)
+# FALSE
+AIC(fit1MBRA, fit2MBRA)
+#          df      AIC
+# fit1MBRA  7 4348.591 # 3 m scale is lower 
+# fit2MBRA  7 4359.372 
+
+# fit 2 has a lower AIC weight BUT it gets flagged for having a singular fit so I would instead want to use the model with the 3 m resolution gap variables. 
+########################################################
+########################  MMYS  ########################
+########################################################
+
+
+fit1MMYS= glmer(used ~  
+                  gap3.mean.area + 
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MMYS,
+              family=binomial(link="logit"),nAGQ = 0) 
+fit2MMYS= glmer(used ~  
+                  gap5.mean.area +
+                  D0 + H95 + Hsd + water.distance +
+                  (1|BatID), data=MMYS,
+              family=binomial(link="logit"),nAGQ = 0) 
+AIC(fit1MMYS, fit2MMYS)
+#          df      AIC
+# fit1MMYS  7 5145.626
+# fit2MMYS  7 5143.210 # 5 m scale is lower 
+
+         # The difference between the weights is negligible, I feel comfortable sticking with the 3 m resolution due to the singularity issues found in the M. brandtii models. 
+################################################
+# The gap5 model for MBRA throws a singularity warning, and the AIC weights between the model pairs is very little so I will use the 3 m resolution models to continue. 
+
+summary(fit1MBRA)
+
+summary(fit1MMYS)
+
+sjPlot::tab_model(fit1MBRA, fit1MMYS,fit2MBRA, fit2MMYS,
+                  dv.labels = c(
+                    "Myotis brandtii - 3 m", "Myotis mystacinus - 3 m",
+                    "Myotis brandtii - 5 m", "Myotis mystacinus - 5 m"), transform = NULL, auto.label = FALSE) 
+```
+
+
+## Use the VIF function to test for correlation amongst variables 
+```{r}
+library(car)
+### VIF equal to 1 = variables are not correlated.
+## VIF between 1 and 5 = variables are moderately correlated.
+## VIF greater than 5 = variables are highly correlated2.
+vif(fit1MBRA)
+# gap3.mean.area             D0            H95            Hsd water.distance 
+#       2.741990       2.413678       6.131832       5.201883       1.152878 
+vif(fit1MMYS)
+# gap3.mean.area             D0            H95            Hsd water.distance 
+#       2.464688       3.025031       4.715925       3.863640       1.249359 
+
+# Drop H95 to see how this changes the correlation amongst variables 
+fit3MBRA= glmer(used ~  
+                  gap3.mean.area + 
+                  D0 + Hsd + water.distance +
+                  (1|BatID), data=MBRA,
+              family=binomial(link="logit"),nAGQ = 0) 
+fit3MMYS= glmer(used ~  
+                  gap3.mean.area + 
+                  D0 + Hsd + water.distance +
+                  (1|BatID), data=MMYS,
+              family=binomial(link="logit"),nAGQ = 0) 
+
+
+vif(fit3MBRA)
+# gap3.mean.area             D0            Hsd water.distance 
+#       2.513972       2.334639       1.111466       1.135041  
+vif(fit3MMYS)
+# gap3.mean.area             D0            Hsd water.distance 
+#       2.503120       2.605929       1.076558       1.235351 
+
+
+## Sorted 
+
+bigfit1 = glmer(used ~  Species + 
+                  gap3.mean.area + 
+                  D0 + Hsd + water.distance +
+                  Species*gap3.mean.area + 
+                  Species*D0 + 
+                  Species*Hsd + 
+                  Species*water.distance +
+                  (1|BatID), data=dt1,
+              family=binomial(link="logit"),nAGQ = 0)
+summary(bigfit1)
+## Now step-wise selection with AIC 
+drop1(bigfit1)
+# used ~ Species + gap3.mean.area + gap3.sd.area + D0 + Hsd + water.distance + 
+#     Species * gap3.mean.area + Species * gap3.sd.area + Species * 
+#     D0 + Species * Hsd + Species * water.distance + (1 | BatID)
+# 
+#                        npar    AIC
+# <none>                      9565.6
+# Species:gap3.mean.area    1 9581.0
+# Species:D0                1 9604.8
+# Species:Hsd               1 9567.4
+# Species:water.distance    1 9564.5 ** 
+
+# Drop interaction between species and distance to water
+  
+bigfit2 =  glmer(used ~  Species + 
+                   gap3.mean.area + 
+                   D0 + Hsd + water.distance +
+                   Species*gap3.mean.area + 
+                   Species*D0 + 
+                   Species*Hsd + 
+                   (1|BatID), data=dt1,
+               family=binomial(link="logit"),nAGQ = 0)
+summary(bigfit2)
+
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -2.36989    0.06354 -37.300  < 2e-16 ***
+# SpeciesM.mystacinus                -0.20330    0.08833  -2.302   0.0214 *  
+# gap3.mean.area                     -0.61737    0.07116  -8.676  < 2e-16 ***
+# D0                                 -0.44494    0.07080  -6.284 3.30e-10 ***
+# Hsd                                 0.25406    0.04561   5.570 2.54e-08 ***
+# water.distance                     -0.51920    0.03588 -14.471  < 2e-16 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.43080    0.09966   4.323 1.54e-05 ***
+# SpeciesM.mystacinus:D0              0.60367    0.09596   6.291 3.16e-10 ***
+# SpeciesM.mystacinus:Hsd             0.13839    0.06488   2.133   0.0329 *  
+   
+sjPlot::tab_model(bigfit2, transform = NULL, auto.label = FALSE) 
+
+
+drop1(bigfit2)
+# boundary (singular) fit: see help('isSingular')
+## Suggests to keep everything 
+#                        npar    AIC
+# <none>                      9545.9 # Do not drop any further 
+# water.distance            1 9746.2
+# Species:gap3.mean.area    1 9572.8
+# Species:gap3.sd.area      1 9558.9
+# Species:D0                1 9599.5
+# Species:Hsd               1 9546.6
+
+
+
+```
+
+
+
+```{r}
+### Model diagnostics for 
+simulationOutput <- simulateResiduals(fittedModel = bigfit2, plot = T)
+### Help with interpretation of residuals vs. predicted: 
+# https://stats.stackexchange.com/questions/449208/diagnostic-plot-residual-vs-predicted-of-a-glmm-using-dharma
+### recalculateResiduals()
+# KS test -  the p-value shows you that there is *not* a significant deviation from the assumed distribution
+# Dispersion test – Not over or underdispersed
+# Outlier – No indication of outliers 
+# 
+# Residuals appear to more or less agree with predicted values 
+#windows()
+testDispersion(simulationOutput)
+# 
+# 	DHARMa nonparametric dispersion test via sd of residuals fitted vs.
+# 	simulated
+# 
+# data:  simulationOutput
+# dispersion = 0.9964, p-value = 0.944
+# alternative hypothesis: two.sided
+# no strong evidence for Dispersion issues 
+testZeroInflation(simulationOutput)
+# 	DHARMa zero-inflation test via comparison to expected zeros with simulation
+# 	under H0 = fitted model
+# 
+# data:  simulationOutput
+# ratioObsSim = 1.0012, p-value = 0.816
+# alternative hypothesis: two.sided
+# No strong evidence for zero inflation 
+testQuantiles(simulationOutput)
+# 	Test for location of quantiles via qgam
+# 
+# data:  simulationOutput
+# p-value < 2.2e-16
+# alternative hypothesis: both
+## Evidence found that there are strong deviations from residuals and predicted values** 
+# "A significant p-value for the splines means the fitted spline deviates from a flat line at the expected location (p-values of intercept and spline are combined via Benjamini & Hochberg adjustment to control the FDR)
+#The p-values of the splines are combined into a total p-value via Benjamini & Hochberg adjustment to control the FDR."
+testCategorical(simulationOutput, catPred = dt1$BatID)
+## No bat IDs had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+testCategorical(simulationOutput, catPred = dt1$Species)
+## No bat species had a low p value for the Asymptotic  one-sample Kolmogorov-Smirnov test
+
+vif(bigfit2)
+        #        Species         gap3.mean.area                     D0                    Hsd 
+        #       1.095477               5.148412               5.380427               2.109284 
+        # water.distance Species:gap3.mean.area             Species:D0            Species:Hsd 
+        #       1.174590               5.280176               5.574119               2.127375 
+
+
+# D0 and gap 3 mean are pushing it but maybe that's not a huge deal 
+
+```
+
+
+## Plot predictions using glm 
+```{r}
+## Refitting the model with GLM to sketch results
+bigfit2.0<- glm(used ~  Species + 
+                   gap3.mean.area + 
+                   D0 + Hsd + water.distance +
+                   Species*gap3.mean.area + 
+                   Species*D0 + 
+                   Species*Hsd, 
+                  family=binomial(), data=dt1)
+summary(bigfit2.0)
+# Call:
+# glm(formula = used ~ gap3.mean.area + gap3.sd.area + D0 + H95 + 
+#     Hsd + water.distance, family = binomial(), data = MMYS)
+# 
+# Coefficients:
+#                Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -2.35509    0.04372 -53.863  < 2e-16 ***
+# SpeciesM.mystacinus                -0.20973    0.06144  -3.414 0.000641 ***
+# gap3.mean.area                     -0.64842    0.06835  -9.487  < 2e-16 ***
+# D0                                 -0.45603    0.07056  -6.463 1.03e-10 ***
+# Hsd                                 0.24518    0.04457   5.502 3.76e-08 ***
+# water.distance                     -0.48724    0.03492 -13.952  < 2e-16 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.47468    0.09738   4.875 1.09e-06 ***
+# SpeciesM.mystacinus:D0              0.58313    0.09526   6.122 9.26e-10 ***
+# SpeciesM.mystacinus:Hsd             0.13679    0.06382   2.143 0.032079 * 
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+# 
+# (Dispersion parameter for binomial family taken to be 1)
+# 
+#     Null deviance: 5408.0  on 8849  degrees of freedom
+# Residual deviance: 5104.5  on 8843  degrees of freedom
+# AIC: 5118.5
+# 
+
+
+# Number of Fisher Scoring iterations: 6
+batcolors = c("#32A5FF", "#011f4b") 
+
+# New facet label names for supp variable
+supp.labs <- c("M. brandtii", "M. mystacinus")
+names(supp.labs) <- c("M.brandtii", "M.mystacinus")
+### Plotting predictions ####
+# gap3.mean ---------------------------------------
+range.gm <- range(dt1$gap3.mean.area)
+range.gm
+# -1.040815  1.198892
+  
+pred <- data.frame(expand.grid(
+  D0 = mean(dt1$D0),
+  gap3.mean.area = seq(from = -1.040815  , to = 1.198892, by = 0.1),
+  Hsd = mean(dt1$Hsd), 
+  water.distance = mean(dt1$water.distance),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+## Plot 
+p1 <- ggplot(pred, aes(gap3.mean.area, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = gap3.mean.area, ymin = LL, ymax = UL,
+              fill = factor(Species)), alpha = 0.4)  +
+  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  xlab ("Mean average area of gaps within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  xlab ("gap3.mean.area") +
+  ylab ("Probability of use") +
+  theme(text = element_text(size=20))
+p1
+
+# distance to water ---------------------------------------
+range.gs <- range(dt1$water.distance)
+range.gs
+# 1.282820  3.698758
+  
+pred <- data.frame(expand.grid(
+  D0 = mean(dt1$D0),
+  gap3.mean.area = mean(dt1$gap3.mean.area),
+  Hsd = mean(dt1$Hsd), 
+  water.distance = seq(from = 1.282820  , to = 3.698758, by = 0.1),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+
+## Plot 
+p2 <- ggplot(pred, aes(water.distance, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = water.distance, ymin = LL, ymax = UL, 
+              fill = factor(Species)), alpha = 0.4) +
+  facet_wrap(~Species,labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  xlab ("Distance to water") +
+  ylab ("Probability of use") +
+  theme(text = element_text(size=20))
+p2
+
+
+# D0---------------------------------------
+range.D0 <- range(dt1$D0)
+range.D0
+# -0.9838802  3.3390781
+  
+pred <- data.frame(expand.grid(
+  D0 = seq(from = -0.9838802, to = 3.3390781, by = 0.1),
+  gap3.sd.area = mean(dt1$gap3.sd.area),
+  gap3.mean.area = mean(dt1$gap3.mean.area),
+  Hsd = mean(dt1$Hsd), 
+  water.distance = mean(dt1$water.distance),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+## Plot 
+p3 <- ggplot(pred, aes(D0, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = D0, ymin = LL, ymax = UL,
+                  fill = factor(Species)), alpha = 0.4) + 
+  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  xlab ("Canopy density within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  xlab ("D0") +
+  ylab ("Probability of use") +
+  theme(text = element_text(size=20))
+p3
+
+# Hsd ---------------------------------------
+range.Hsd <- range(dt1$Hsd)
+range.Hsd
+# -2.125363  3.625778
+  
+pred <- data.frame(expand.grid(
+  D0 = mean(dt1$D0),
+  gap3.sd.area = mean(dt1$gap3.sd.area),
+  gap3.mean.area = mean(dt1$gap3.mean.area),
+  Hsd = seq(from = -2.125363, to = 3.625778, by = 0.1), 
+  water.distance = mean(dt1$water.distance),
+  Species = c("M.brandtii", "M.mystacinus"))) 
+  
+pred <- cbind(pred, predict(bigfit2.0, newdata = pred,
+                             type = "link", se.fit = TRUE))
+pred$PP <- plogis(pred$fit)
+pred$LL <- plogis(pred$fit - (1.96 * pred$se.fit))
+pred$UL <- plogis(pred$fit + (1.96 * pred$se.fit))
+## Plot 
+p4 <- ggplot(pred, aes(Hsd, PP)) + 
+  geom_line(aes(col = factor(Species)), linewidth = 1.5) + 
+  geom_ribbon(aes(x = Hsd, ymin = LL, ymax = UL, 
+                  fill = factor(Species)), alpha = 0.4) + 
+  facet_wrap(~Species, labeller = labeller(Species = supp.labs)) +
+  scale_y_continuous(
+  labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.')) +
+  theme_bw() +
+  theme(strip.text = element_text(face = "italic"),
+        legend.position="none") +
+  scale_colour_manual(values = 
+                        batcolors,  
+                      aesthetics = c("fill", "colour"), 
+                      name = "Bat species") + 
+  xlab ("Standard deviation of vegetation height within 45 m of a location") +
+  ylab ("Predicted probability of use") +
+  xlab ("Hsd") +
+  ylab ("Probability of use") +
+  theme(text = element_text(size=20))
+p4
+
+library(cowplot)
+windows()
+cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, labels = c("a.", "b.", "c.", "d.")) +
+  theme(text = element_text(size=30)) 
+
+```
+
