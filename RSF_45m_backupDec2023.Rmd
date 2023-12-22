@@ -1116,6 +1116,8 @@ vif(bigfit2)
 #            Species:Hsd 
 #               2.506020 
 ```
+
+
 ## Plot predictions using glm 
 ```{r}
 ## Refitting the model with GLM to sketch results
