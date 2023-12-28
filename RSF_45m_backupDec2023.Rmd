@@ -138,14 +138,15 @@ mbrahr <- HR %>%
   filter(Species == "M.brandtii") %>% 
   droplevels() %>% 
   select(HRarea) 
-# mbrahr <- mbrahr$HRarea
+mbrahr <- mbrahr$HRarea
+
 mmyshr <- HR %>% 
   filter(Species == "M.mystacinus") %>% 
   droplevels() %>% 
   select(HRarea) 
-# mmyshr <- mmyshr$HRarea
+mmyshr <- mmyshr$HRarea
 # 
-# wilcox.test(mbrahr, mmyshr)
+
 summary(mbrahr)
  # Min.   : 0.110  
  # 1st Qu.: 1.600  
@@ -161,6 +162,8 @@ summary(mmyshr)
  # 3rd Qu.:1.0975  
  # Max.   :1.8700  
 # 	Wilcoxon rank sum exact test
+
+wilcox.test(mbrahr, mmyshr)
 # 
 # data:  mbrahr and mmyshr
 # W = 92, p-value = 0.00562

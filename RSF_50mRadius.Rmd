@@ -11,6 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 ### Prepare the work space
+# citation()
+
 library(tidyverse)
 library(dplyr)
 library(scales)
@@ -360,15 +362,14 @@ traittable <- trait.loadings  %>%
 ```
 
 
-
-
 ## RSF
 ```{r}
 ## Simple models - separated by bat species, no species interaction 
 # install.packages("lme4", type = "source") 
 # library(lme4)
-MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7633 obs of 49 vars
-MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8850 obs of 49 vars
+MBRA <- dt1 %>% filter(Species == "M.brandtii") %>% droplevels() # 7634 obs of 49 vars
+MMYS <- dt1 %>% filter(Species == "M.mystacinus") %>% droplevels() # 8888 obs of 49 vars
+
 ########################################################
 ########################  MBRA  ########################
 ########################################################
@@ -433,7 +434,9 @@ sjPlot::tab_model(fit1MBRA, fit1MMYS,fit2MBRA, fit2MMYS,
 library(car)
 ### VIF equal to 1 = variables are not correlated.
 ## VIF between 1 and 5 = variables are moderately correlated.
-## VIF greater than 5 = variables are highly correlated2.
+## VIF greater than 5 = variables are highly correlated.
+
+
 vif(fit1MBRA)
 # gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.741990       2.413678       6.131832       5.201883       1.152878 
@@ -497,7 +500,8 @@ bigfit2 =  glmer(used ~  Species +
                    Species*Hsd + 
                    (1|BatID), data=dt1,
                family=binomial(link="logit"),nAGQ = 0)
-summary(bigfit2)
+
+(bigfit2)
 
 # Fixed effects:
 #                                    Estimate Std. Error z value Pr(>|z|)    
@@ -511,7 +515,6 @@ summary(bigfit2)
 # SpeciesM.mystacinus:D0              0.60367    0.09596   6.291 3.16e-10 ***
 # SpeciesM.mystacinus:Hsd             0.13839    0.06488   2.133   0.0329 *  
    
-sjPlot::tab_model(bigfit2, transform = NULL, auto.label = FALSE) 
 
 
 drop1(bigfit2)
@@ -525,7 +528,9 @@ drop1(bigfit2)
 # Species:D0                1 9599.5
 # Species:Hsd               1 9546.6
 
+summary(bigfit2)
 
+sjPlot::tab_model(bigfit2, transform = NULL, auto.label = FALSE, show.re.var = TRUE,   show.fstat = TRUE, show.stat = TRUE) 
 
 ```
 
@@ -581,7 +586,7 @@ vif(bigfit2)
         #       1.174590               5.280176               5.574119               2.127375 
 
 
-# D0 and gap 3 mean are pushing it but maybe that's not a huge deal 
+# D0 and gap 3 mean are pushing it but maybe that's not a huge deal, check with Katrine  
 
 ```
 
@@ -797,5 +802,58 @@ windows()
 cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, labels = c("a.", "b.", "c.", "d.")) +
   theme(text = element_text(size=30)) 
 
+```
+
+
+
+## Compare home ranges
+
+"A Mann-Whitney U test (sometimes called the Wilcoxon rank-sum test) is used to compare the differences between two independent samples when the sample distributions are not normally distributed and the sample sizes are small (n <30).
+
+It is considered to be the nonparametric equivalent to the two-sample independent t-test." 
+# https://www.statology.org/mann-whitney-u-test-r/ 
+
+```{r}
+HR <- read_excel("C:/Users/apmc/OneDrive - Norwegian University of Life Sciences/1. Nittedal 2018-2020/Nittedal_Main/Analyses/Inputs/HomerangeOverview.xlsx", 
+     col_types = c("text", "text", "text", 
+         "numeric", "text", "numeric", "numeric", 
+         "text", "numeric", "numeric"))
+HR$Species <- as.factor(HR$Species)
+HR$BatID <- as.factor(HR$BatID)
+mbrahr <- HR %>% 
+  filter(Species == "M.brandtii") %>% 
+  droplevels() %>% 
+  select(HRarea) 
+mbrahr <- mbrahr$HRarea
+
+mmyshr <- HR %>% 
+  filter(Species == "M.mystacinus") %>% 
+  droplevels() %>% 
+  select(HRarea) 
+mmyshr <- mmyshr$HRarea
+# 
+
+summary(mbrahr)
+ # Min.   : 0.110  
+ # 1st Qu.: 1.600  
+ # Median : 1.940  
+ # Mean   : 3.999  
+ # 3rd Qu.: 5.230  
+ # Max.   :12.740  
+summary(mmyshr)
+ # Min.   :0.0800  
+ # 1st Qu.:0.3675  
+ # Median :0.5150  
+ # Mean   :0.7175  
+ # 3rd Qu.:1.0975  
+ # Max.   :1.8700  
+# 	Wilcoxon rank sum exact test
+
+wilcox.test(mbrahr, mmyshr)
+# 
+# data:  mbrahr and mmyshr
+# W = 92, p-value = 0.00562
+# alternative hypothesis: true location shift is not equal to 0
+# There is strong evidence that the home range size between the two species is distinct from each other. 
 ```
 
