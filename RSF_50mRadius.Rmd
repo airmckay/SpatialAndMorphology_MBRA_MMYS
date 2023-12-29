@@ -444,6 +444,21 @@ vif(fit1MMYS)
 # gap3.mean.area             D0            H95            Hsd water.distance 
 #       2.464688       3.025031       4.715925       3.863640       1.249359 
 
+
+(bigfit2)
+
+# Fixed effects:
+#                                    Estimate Std. Error z value Pr(>|z|)    
+# (Intercept)                        -2.36989    0.06354 -37.300  < 2e-16 ***
+# SpeciesM.mystacinus                -0.20330    0.08833  -2.302   0.0214 *  
+# gap3.mean.area                     -0.61737    0.07116  -8.676  < 2e-16 ***
+# D0                                 -0.44494    0.07080  -6.284 3.30e-10 ***
+# Hsd                                 0.25406    0.04561   5.570 2.54e-08 ***
+# water.distance                     -0.51920    0.03588 -14.471  < 2e-16 ***
+# SpeciesM.mystacinus:gap3.mean.area  0.43080    0.09966   4.323 1.54e-05 ***
+# SpeciesM.mystacinus:D0              0.60367    0.09596   6.291 3.16e-10 ***
+# SpeciesM.mystacinus:Hsd             0.13839    0.06488   2.133   0.0329 *  
+   
 # Drop H95 to see how this changes the correlation amongst variables 
 fit3MBRA= glmer(used ~  
                   gap3.mean.area + 
@@ -500,21 +515,6 @@ bigfit2 =  glmer(used ~  Species +
                    Species*Hsd + 
                    (1|BatID), data=dt1,
                family=binomial(link="logit"),nAGQ = 0)
-
-(bigfit2)
-
-# Fixed effects:
-#                                    Estimate Std. Error z value Pr(>|z|)    
-# (Intercept)                        -2.36989    0.06354 -37.300  < 2e-16 ***
-# SpeciesM.mystacinus                -0.20330    0.08833  -2.302   0.0214 *  
-# gap3.mean.area                     -0.61737    0.07116  -8.676  < 2e-16 ***
-# D0                                 -0.44494    0.07080  -6.284 3.30e-10 ***
-# Hsd                                 0.25406    0.04561   5.570 2.54e-08 ***
-# water.distance                     -0.51920    0.03588 -14.471  < 2e-16 ***
-# SpeciesM.mystacinus:gap3.mean.area  0.43080    0.09966   4.323 1.54e-05 ***
-# SpeciesM.mystacinus:D0              0.60367    0.09596   6.291 3.16e-10 ***
-# SpeciesM.mystacinus:Hsd             0.13839    0.06488   2.133   0.0329 *  
-   
 
 
 drop1(bigfit2)
@@ -586,7 +586,7 @@ vif(bigfit2)
         #       1.174590               5.280176               5.574119               2.127375 
 
 
-# D0 and gap 3 mean are pushing it but maybe that's not a huge deal, check with Katrine  
+# Higher VIF values for interacting terms is not too much of a concern 
 
 ```
 
@@ -799,8 +799,11 @@ p4
 
 library(cowplot)
 windows()
-cowplot::plot_grid(p1, p2, p3, p4, nrow = 2, labels = c("a.", "b.", "c.", "d.")) +
-  theme(text = element_text(size=30)) 
+cowplot::plot_grid(p1, p2, p3, p4, nrow = 4, 
+                   labels = c("a.", "b.", "c.", "d."), 
+                   label_x = 0.08, label_y = 0.08,
+                   hjust = -0.5, vjust = -0.5) +
+  theme(text = element_text(size=16)) 
 
 ```
 
